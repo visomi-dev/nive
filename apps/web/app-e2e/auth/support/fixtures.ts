@@ -94,7 +94,7 @@ export async function passkeySignup(page: Page, email = address()): Promise<stri
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
 
-  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await continueAfterSignup(page);
 
   return email;
 }
@@ -150,9 +150,19 @@ export async function signup(page: Page, email = address()): Promise<string> {
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
 
-  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await continueAfterSignup(page);
 
   return email;
+}
+
+export async function continueAfterSignup(page: Page): Promise<void> {
+  await expect(
+    page.getByRole('heading', { name: 'What would you like to organize first?', exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole('link', { name: 'Continue to Nive', exact: true }).click();
+
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
 }
 
 export async function openAccount(page: Page): Promise<Locator> {

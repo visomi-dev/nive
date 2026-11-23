@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { readMailCode } from '@visomi-stack/dev-testing';
 
-import { expect, test, address, password, signup } from './support/fixtures';
+import { expect, test, address, password, signup, continueAfterSignup } from './support/fixtures';
 
 async function separated(first: Locator, second: Locator, horizontal = false): Promise<void> {
   await expect
@@ -127,7 +127,7 @@ test('keeps access actions separated, password controls usable and language chan
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
 
-  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await continueAfterSignup(page);
 });
 
 test('keeps security navigation apart from actions and groups destructive confirmations', async ({ page }) => {

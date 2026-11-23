@@ -10,6 +10,7 @@ import {
   expireAuthentication,
   passkeySignup,
   virtualPasskey,
+  continueAfterSignup,
 } from './support/fixtures';
 
 type RegistrationOptions = { options: { user: { id: string; name: string; displayName: string } } };
@@ -91,7 +92,7 @@ test('registers and authenticates a real virtual passkey through the browser', a
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
 
-  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await continueAfterSignup(page);
 
   await logout(page);
 

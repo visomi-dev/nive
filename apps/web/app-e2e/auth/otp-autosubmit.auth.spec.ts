@@ -1,7 +1,16 @@
 import type { Locator, Page } from '@playwright/test';
 import { readMailCode } from '@visomi-stack/dev-testing';
 
-import { address, expect, logout, password, passwordStart, signup, test } from './support/fixtures';
+import {
+  address,
+  continueAfterSignup,
+  expect,
+  logout,
+  password,
+  passwordStart,
+  signup,
+  test,
+} from './support/fixtures';
 
 async function startAccount(page: Page): Promise<string> {
   const email = address();
@@ -49,9 +58,13 @@ async function autofill(input: Locator, code: string) {
   }, code);
 }
 
-for (const [label, endpoint, start, retry] of [
-  ['account email', '**/api/auth/email/verify', startAccount, paste],
-  ['new-device email', '**/api/auth/password/verify', startNewDevice, autofill],
+async function expectHome(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+}
+
+for (const [label, endpoint, start, retry, finish] of [
+  ['account email', '**/api/auth/email/verify', startAccount, paste, continueAfterSignup],
+  ['new-device email', '**/api/auth/password/verify', startNewDevice, autofill, expectHome],
 ] as const) {
   test(`${label} verifies a complete OTP exactly once and allows an explicit retry`, async ({ page }) => {
     const email = await start(page);
@@ -129,7 +142,7 @@ for (const [label, endpoint, start, retry] of [
 
     await retry(input, code);
 
-    await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+    await finish(page);
 
     expect(attempts).toBe(2);
   });

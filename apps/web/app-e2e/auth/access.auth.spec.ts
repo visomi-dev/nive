@@ -1,6 +1,16 @@
 import { readMailCode } from '@visomi-stack/dev-testing';
 
-import { expect, test, address, signup, logout, openAccount, passwordStart, password } from './support/fixtures';
+import {
+  expect,
+  test,
+  address,
+  signup,
+  logout,
+  openAccount,
+  passwordStart,
+  password,
+  continueAfterSignup,
+} from './support/fixtures';
 
 test('registers with a password, protects unverified access and restores SSR sessions', async ({ page, context }) => {
   const email = address();
@@ -22,7 +32,7 @@ test('registers with a password, protects unverified access and restores SSR ses
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
 
-  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await continueAfterSignup(page);
 
   const rendered = await context.request.get('/app/en/home');
   const result3 = await rendered.text();

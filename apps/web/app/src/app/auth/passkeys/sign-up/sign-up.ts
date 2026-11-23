@@ -37,6 +37,7 @@ export class SignUp {
         const result = await this.keys.register(email);
 
         if (result.flowId && result.expiresAt) {
+          this.journey.recordSignup(result);
           this.journey.start('email', { flowId: result.flowId, expiresAt: result.expiresAt });
         }
 

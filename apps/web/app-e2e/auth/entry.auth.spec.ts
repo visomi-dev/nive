@@ -1,6 +1,6 @@
 import { readMailCode } from '@visomi-stack/dev-testing';
 
-import { expect, test, address, password, expireEmailVerification } from './support/fixtures';
+import { expect, test, address, password, expireEmailVerification, continueAfterSignup } from './support/fixtures';
 
 test('keeps the device review destination when changing the sign-in language', async ({ page }) => {
   const destination = '/security/devices/review?requestId=11111111-1111-4111-8111-111111111111';
@@ -151,6 +151,8 @@ test('requests and verifies a fresh email challenge after the displayed challeng
   const code = await readMailCode(email);
 
   await page.getByLabel('Verification code', { exact: true }).fill(code);
+
+  await continueAfterSignup(page);
 
   await expect(page).toHaveURL('/app/en/home');
 });
