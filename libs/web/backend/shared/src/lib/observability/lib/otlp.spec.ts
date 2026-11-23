@@ -73,7 +73,7 @@ describe('OTLP trace export', () => {
     { OTEL_EXPORTER_OTLP_ENDPOINT: 'file:///synthetic' },
     { OTEL_EXPORTER_OTLP_ENDPOINT: 'http://receiver.example.test:4318' },
     { OTEL_EXPORTER_OTLP_ENDPOINT: 'https://public-receiver.example.test:4318' },
-    { OTEL_EXPORTER_OTLP_ENDPOINT: 'http://trace-receiver.internal.example.test:4318' },
+    { OTEL_EXPORTER_OTLP_ENDPOINT: 'http://fixture.railway.internal.example.test:4318' },
     { OTEL_EXPORTER_OTLP_ENDPOINT: `http://${marker}@localhost` },
     { OTEL_EXPORTER_OTLP_ENDPOINT: `http://user:${marker}@localhost` },
     { OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost/?token=${marker}` },
@@ -92,7 +92,7 @@ describe('OTLP trace export', () => {
     expect(() => otlpSpanProcessors({ ...valid, ...override })).toThrow('observability_configuration_invalid');
   });
 
-  it.each(['http://trace-receiver.internal:4318', 'https://trace-receiver.internal/', 'http://[::1]:4318'])(
+  it.each(['http://fixture.railway.internal:4318', 'https://fixture.railway.internal/', 'http://[::1]:4318'])(
     'configures the authenticated private receiver %s without connecting before there are spans',
     async (endpoint) => {
       const processors = otlpSpanProcessors({
