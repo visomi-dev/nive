@@ -7,7 +7,8 @@
 pnpm-lock.yaml
 resources
 /Dockerfile
-# open-design skills are vendored documentation shipped as-is
+# Vendored agent guides keep their source formatting.
+/.agents/skills/
 .opencode
 
 **/.astro/
