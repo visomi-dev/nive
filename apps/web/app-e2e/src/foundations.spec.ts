@@ -52,7 +52,7 @@ for (const locale of ['en', 'es']) {
 
     await page.evaluate(() => document.fonts.ready);
 
-    await expect(page.locator('body')).toHaveCSS('font-family', /Inter/);
+    await expect(page.locator('body')).toHaveCSS('font-family', /Manrope/);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /Manrope/);
 

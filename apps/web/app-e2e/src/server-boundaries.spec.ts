@@ -44,7 +44,7 @@ test('routes index.html through Angular with a fresh nonce and working hydration
 
     await expect(page.locator('app-root')).not.toHaveAttribute('ngh');
 
-    await expect(page.locator('body')).toHaveCSS('font-family', /Inter/);
+    await expect(page.locator('body')).toHaveCSS('font-family', /Manrope/);
 
     expect(failures).toEqual([]);
   }
