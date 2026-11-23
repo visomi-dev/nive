@@ -1,0 +1,34 @@
+@import '../../../../styles.base.css';
+@source './';
+@source '../../../../libs/web/frontend/ui/src';
+
+/* Route headings receive reading focus without the outline used by interactive controls. */
+@layer base {
+  html {
+    /* Keep navigation and translated content from shifting when a scrollbar appears. */
+    scrollbar-gutter: stable;
+  }
+
+  /* Shells scroll their own content, so the document does not need a scrollbar gutter. */
+  html:has(app-shell, #mobile-navigation:modal) {
+    scrollbar-gutter: auto;
+  }
+
+  /* The shell owns scrolling; a larger document viewport must not move its navigation. */
+  html:has(app-shell),
+  body:has(app-shell) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    background-color: var(--nive-canvas);
+    color: var(--nive-ink);
+  }
+
+  h1[data-navigation-focus]:focus {
+    outline: none;
+  }
+}

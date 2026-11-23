@@ -1,0 +1,188 @@
+---
+import logotype from '../../../../../../../assets/brand/logotype-nive.svg?url';
+import Label from '../../../components/label.astro';
+import ThemeSelect from '../../../components/theme-select.astro';
+import Text from '../../../components/text.astro';
+import Heading from '../../../components/heading.astro';
+import BaseLayout from '../../../layouts/base.astro';
+import BrowserPrivacy from '../../../components/site/browser-privacy.astro';
+import AppShell from '../../../components/app-shell.astro';
+import Sidebar from '../../../components/sidebar.astro';
+import Topbar from '../../../components/topbar.astro';
+import Navbar from '../../../components/navbar.astro';
+import NavItem from '../../../components/nav-item.astro';
+import Card from '../../../components/card.astro';
+import LinkButton from '../../../components/link-button.astro';
+import Link from '../../../components/link.astro';
+import { uiDocs } from '../../../ui-docs';
+const locale = Astro.params.locale;
+if (locale !== 'en' && locale !== 'es') return new Response(null, { status: 404 });
+const labels = uiDocs[locale];
+const destinations = [
+  { href: `/${locale}/ui/shell/`, label: labels.home, path: 'M3 10 12 3l9 7v11h-6v-7H9v7H3Z', current: true },
+  { href: '#shell-activity', label: labels.activity, path: 'M4 4h16v16H4zM4 9h16M9 9v11', current: false },
+  {
+    href: '#shell-settings',
+    label: labels.settings,
+    path: 'M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4',
+    current: false,
+  },
+];
+---
+
+<BaseLayout locale={locale} title={labels.names['app-shell']} description={labels.shellNote}>
+  <AppShell content-id="shell-main" skip-label={labels.skipContent}>
+    <Sidebar slot="sidebar" label={labels.primaryNavigation}>
+      <a
+        slot="brand"
+        href={`/${locale}/ui/`}
+        class="ui-focus-ring flex min-h-11 items-center gap-3 rounded-lg font-heading font-bold"
+      >
+        <img src={logotype} alt="Nive" width="194" height="40" class="h-10 w-[194px] object-contain dark:invert" />
+      </a>
+
+      <div class="space-y-1">
+        {destinations.map((item) => (
+          <NavItem href={item.href} aria-current={item.current ? 'page' : undefined}>
+            <svg
+              data-slot="icon"
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d={item.path} />
+            </svg>
+
+            <span>{item.label}</span>
+          </NavItem>
+        ))}
+      </div>
+
+      <Text ui-size="xs" tone="muted" slot="footer" class="border-t border-zinc-200 pt-4 dark:border-zinc-700">
+        {labels.shellFooter}
+      </Text>
+    </Sidebar>
+
+    <Topbar slot="header">
+      <span slot="title">{labels.workspace}</span>
+
+      <Link href={`/${locale}/ui/`} variant="muted" class="inline-flex min-h-11 items-center px-2 text-sm">
+        {labels.catalogLink}
+      </Link>
+
+      <Label inline>
+        <span>{labels.theme}</span>
+
+        <ThemeSelect ui-size="xs" inline>
+          <option value="system">{labels.system}</option>
+
+          <option value="light">{labels.light}</option>
+
+          <option value="dark">{labels.dark}</option>
+        </ThemeSelect>
+      </Label>
+    </Topbar>
+
+    <header class="mb-8 grid gap-4">
+      <div class="justify-self-end">
+        <BrowserPrivacy locale={locale} />
+      </div>
+
+      <Text ui-size="xs" tone="accent" mono class="tracking-wide">
+        VISOMI / APP SHELL
+      </Text>
+
+      <Heading as="h1" ui-size="title" class="max-w-2xl">
+        {labels.shellTitle}
+      </Heading>
+
+      <Text ui-size="inherit" tone="muted" class="max-w-2xl">
+        {labels.shellNote}
+      </Text>
+    </header>
+
+    <div class="grid gap-5 sm:grid-cols-2">
+      <Card>
+        <Heading as="h2" ui-size="sm">
+          {labels.studio}
+        </Heading>
+
+        <Text ui-size="sm" tone="muted">
+          {labels.cardBody}
+        </Text>
+      </Card>
+
+      <Card tone="raised">
+        <Heading as="h2" ui-size="sm">
+          {labels.sandbox}
+        </Heading>
+
+        <Text ui-size="sm" tone="muted">
+          {labels.containerNote}
+        </Text>
+      </Card>
+    </div>
+
+    <Card
+      as="section"
+      tone="default"
+      padding="lg"
+      layout="plain"
+      id="shell-activity"
+      class="mt-10 min-h-72 scroll-mt-28"
+    >
+      <Heading as="h2" ui-size="md">
+        {labels.activity}
+      </Heading>
+
+      <Text ui-size="inherit" tone="muted" class="mt-4">
+        {labels.note}
+      </Text>
+    </Card>
+
+    <Card
+      as="section"
+      tone="default"
+      padding="lg"
+      layout="plain"
+      id="shell-settings"
+      class="mt-8 min-h-72 scroll-mt-28"
+    >
+      <Heading as="h2" ui-size="md" class="mb-5">
+        {labels.settings}
+      </Heading>
+
+      <LinkButton href={`/${locale}/ui/`} class="w-full sm:w-auto">
+        {labels.catalogLink}
+      </LinkButton>
+    </Card>
+
+    <footer
+      slot="footer"
+      class="border-t border-zinc-200 px-5 py-6 text-xs text-zinc-600 sm:px-8 dark:border-zinc-800 dark:text-zinc-400"
+    >
+      {labels.shellFooter}
+    </footer>
+
+    <Navbar slot="mobile" aria-label={labels.primaryNavigation}>
+      {destinations.map((item) => (
+        <NavItem placement="navbar" href={item.href} aria-current={item.current ? 'page' : undefined}>
+          <svg
+            data-slot="icon"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path d={item.path} />
+          </svg>
+
+          <span>{item.label}</span>
+        </NavItem>
+      ))}
+    </Navbar>
+  </AppShell>
+</BaseLayout>

@@ -1,0 +1,223 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
+import { S3Client } from '@bradenmacdonald/s3-lite-client';
+import { afterEach, expect, it, vi } from 'vitest';
+
+import { createBackupObjects } from './s3-backup';
+
+const env = {
+  NODE_ENV: 'test',
+  PRIVATE_S3_ENDPOINT: 'http://127.0.0.1:8333',
+  PRIVATE_S3_ACCESS_KEY: 'synthetic',
+  PRIVATE_S3_SECRET_KEY: 'synthetic',
+  PRIVATE_S3_BUCKET: 'synthetic-bucket',
+};
+const railwayEnv = { ...env, NODE_ENV: 'production', PRIVATE_S3_ENDPOINT: 'https://t3.storageapi.dev' };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+it.each([
+  { PRIVATE_S3_ENDPOINT: undefined },
+  { PRIVATE_S3_ENDPOINT: 'not an origin' },
+  { NODE_ENV: 'production' },
+  { NODE_ENV: undefined },
+  { PRIVATE_S3_ENDPOINT: 'ftp://127.0.0.1/' },
+  { PRIVATE_S3_ENDPOINT: 'http://example.test/' },
+  { PRIVATE_S3_ENDPOINT: 'http://127.0.0.1/bucket' },
+  { PRIVATE_S3_ENDPOINT: 'https://example.test/?secret=synthetic' },
+  { PRIVATE_S3_ENDPOINT: 'https://t3.storageapi.dev:8443' },
+  { PRIVATE_S3_ENDPOINT: 'https://t3.storageapi.dev.' },
+  { PRIVATE_S3_ENDPOINT: 'https://t3.storageapi.dev/synthetic-bucket' },
+  { PRIVATE_S3_ENDPOINT: 'https://synthetic-bucket.t3.storageapi.dev' },
+  { PRIVATE_S3_ENDPOINT: 'https://other-bucket.t3.storageapi.dev' },
+  { PRIVATE_S3_ACCESS_KEY: '' },
+  { PRIVATE_S3_SECRET_KEY: '' },
+  { PRIVATE_S3_BUCKET: '' },
+  { PRIVATE_S3_BUCKET: 'not/a-bucket' },
+])('leaves missing or unsafe object storage unavailable', (override) => {
+  expect(createBackupObjects({ ...env, ...override })).toBeUndefined();
+});
+
+it.each([
+  {
+    endpoint: 'https://objects.example.test',
+    origin: 'https://objects.example.test',
+    prefix: '/synthetic-bucket/',
+    region: 'us-east-1',
+  },
+  {
+    endpoint: railwayEnv.PRIVATE_S3_ENDPOINT,
+    origin: 'https://synthetic-bucket.t3.storageapi.dev',
+    prefix: '/',
+    region: 'auto',
+  },
+])('signs conditional writes on the expected origin for $endpoint', async ({ endpoint, origin, prefix, region }) => {
+  const request = vi.fn<typeof fetch>();
+  const timeouts = vi.spyOn(AbortSignal, 'timeout');
+
+  vi.stubGlobal('fetch', request);
+  request.mockResolvedValueOnce(new Response(''));
+  const storage = createBackupObjects({
+    ...env,
+    NODE_ENV: 'production',
+    PRIVATE_S3_ENDPOINT: endpoint,
+  })!;
+
+  await storage.put('vault-backups/scope/object', 'encrypted');
+
+  await expect(storage.put('../other-bucket/file', 'encrypted')).rejects.toMatchObject({ status: 503 });
+
+  expect(request).toHaveBeenCalledOnce();
+  expect(timeouts).toHaveBeenCalledExactlyOnceWith(4_000);
+  const [destination, init] = request.mock.calls[0];
+
+  expect(destination).toMatchObject({
+    origin,
+    pathname: `${prefix}vault-backups/scope/object`,
+  });
+  expect((destination as URL).searchParams.get('X-Amz-Credential')).toContain(`/${region}/s3/aws4_request`);
+  expect((destination as URL).searchParams.get('X-Amz-SignedHeaders')).toContain('if-none-match');
+  expect((destination as URL).searchParams.get('X-Amz-Expires')).toBe('15');
+  expect(init).toMatchObject({
+    method: 'PUT',
+    body: 'encrypted',
+    redirect: 'error',
+    headers: { 'if-none-match': '*' },
+  });
+  storage.close();
+});
+
+it.each([
+  [env, 'https://outside.example.test/synthetic-bucket/fixture'],
+  [env, 'http://127.0.0.1:8333/other-bucket/fixture'],
+  [railwayEnv, 'not a URL'],
+  [railwayEnv, 'https://t3.storageapi.dev/synthetic-bucket/fixture'],
+  [railwayEnv, 'https://other-bucket.t3.storageapi.dev/fixture'],
+  [railwayEnv, 'https://synthetic-bucket.t3.storageapi.dev.example.test/fixture'],
+  [railwayEnv, 'https://synthetic-bucket.t3.storageapi.dev:8443/fixture'],
+  [railwayEnv, 'https://synthetic-bucket.t3.storageapi.dev/other/fixture'],
+  [railwayEnv, 'https://user:password@synthetic-bucket.t3.storageapi.dev/fixture'],
+  [railwayEnv, 'https://synthetic-bucket.t3.storageapi.dev/fixture#fragment'],
+])('rejects a signed destination outside the configured object path', async (configuration, destination) => {
+  vi.spyOn(S3Client.prototype, 'getPresignedUrl').mockResolvedValueOnce(destination);
+  const request = vi.fn<typeof fetch>();
+
+  vi.stubGlobal('fetch', request);
+
+  await expect(createBackupObjects(configuration)!.get('fixture', 3)).rejects.toMatchObject({ status: 503 });
+
+  expect(request).not.toHaveBeenCalled();
+});
+
+it('signs fixed-origin staging cleanup and requires a successful S3 delete', async () => {
+  const request = vi.fn<typeof fetch>();
+  const storage = createBackupObjects(env)!;
+
+  vi.stubGlobal('fetch', request);
+  request.mockResolvedValueOnce(new Response(null, { status: 204 }));
+  request.mockResolvedValueOnce(new Response(null, { status: 403 }));
+
+  await expect(storage.delete('vault-backups/scope/abandoned')).resolves.toBeUndefined();
+
+  await expect(storage.delete('vault-backups/scope/abandoned')).rejects.toMatchObject({ status: 503 });
+
+  expect(request).toHaveBeenCalledWith(
+    expect.objectContaining({
+      origin: 'http://127.0.0.1:8333',
+      pathname: '/synthetic-bucket/vault-backups/scope/abandoned',
+    }),
+    expect.objectContaining({ method: 'DELETE', redirect: 'error', signal: expect.any(AbortSignal) }),
+  );
+});
+
+it('verifies response status, encoding, and bounded streaming before returning bytes', async () => {
+  const request = vi.fn<typeof fetch>();
+  const storage = createBackupObjects(env)!;
+
+  vi.stubGlobal('fetch', request);
+
+  for (const response of [
+    new Response(null, { status: 503 }),
+    new Response('', { status: 412 }),
+    new Response(null),
+    new Response('abc', { headers: { 'content-length': '2' } }),
+    new Response('abc', { headers: { 'content-length': '3', 'content-encoding': 'gzip' } }),
+    new Response('abcd', { headers: { 'content-length': '3' } }),
+    new Response('ab', { headers: { 'content-length': '3' } }),
+  ]) {
+    request.mockResolvedValueOnce(response);
+
+    await expect(storage.get('fixture', 3)).rejects.toMatchObject({ status: 503 });
+  }
+
+  request.mockResolvedValueOnce(
+    new Response('abc', { headers: { 'content-length': '3', 'content-encoding': 'identity' } }),
+  );
+
+  await expect(storage.get('fixture', 3)).resolves.toBe('abc');
+
+  const interrupted = new Error('synthetic stream interrupted');
+  const broken = new ReadableStream<Uint8Array>({ pull: (controller) => controller.error(interrupted) });
+
+  request.mockResolvedValueOnce(new Response(broken, { headers: { 'content-length': '3' } }));
+
+  await expect(storage.get('fixture', 3)).rejects.toBe(interrupted);
+
+  expect(request).toHaveBeenCalledTimes(9);
+});
+
+it('rejects redirects and aborts an in-progress download on the transport deadline', async () => {
+  const redirected = vi.fn();
+  let streaming!: () => void;
+  const started = new Promise<void>((resolve) => {
+    streaming = resolve;
+  });
+  const server = createServer((request, response) => {
+    if (request.url?.startsWith('/redirected')) {
+      redirected();
+      response.end();
+
+      return;
+    }
+
+    if (request.url?.startsWith('/synthetic-bucket/redirect')) {
+      response.writeHead(307, { Location: '/redirected' }).end();
+
+      return;
+    }
+
+    response.writeHead(200, { 'content-length': '3' }).write('a', streaming);
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+
+  const address = server.address() as AddressInfo;
+  const storage = createBackupObjects({ ...env, PRIVATE_S3_ENDPOINT: `http://127.0.0.1:${address.port}` })!;
+
+  try {
+    await expect(storage.put('redirect', 'ciphertext')).rejects.toThrow();
+
+    expect(redirected).not.toHaveBeenCalled();
+
+    const deadline = new AbortController();
+    const deadlineSignal = vi.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(deadline.signal);
+    const request = storage.get('slow', 3);
+    const assertion = expect(request).rejects.toThrow();
+
+    await started;
+
+    deadline.abort(new Error('synthetic deadline expired'));
+
+    await assertion;
+
+    expect(deadlineSignal).toHaveBeenCalledWith(4_000);
+  } finally {
+    server.closeAllConnections();
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

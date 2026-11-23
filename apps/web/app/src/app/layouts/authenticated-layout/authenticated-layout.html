@@ -1,0 +1,478 @@
+<app-shell
+  content-id="workspace-main"
+  skip-label="Skip to content"
+  i18n-skip-label="@@skip"
+  [sidebar-compact]="sidebarCompact()"
+>
+  <app-sidebar
+    label="Primary navigation"
+    i18n-label="@@shellPrimary"
+    navigation-id="workspace-sidebar-navigation"
+    class="lg:gap-4 lg:p-3"
+  >
+    <a
+      data-slot="brand"
+      routerLink="/home"
+      class="inline-flex min-h-11 items-center rounded-lg px-1 ui-focus-ring"
+      [class.justify-center]="sidebarCompact()"
+    >
+      <img
+        [src]="sidebarCompact() ? 'brand/isotype.svg' : 'brand/logotype-nive.svg'"
+        alt="Nive"
+        [attr.width]="sidebarCompact() ? 36 : 175"
+        height="36"
+        class="h-9 max-w-full object-contain dark:invert"
+      />
+    </a>
+
+    @if (sidebarCompact()) {
+      <div class="space-y-1">
+        @for (item of primaryItems(); track item.path) {
+          <ng-container [ngTemplateOutlet]="workspaceLink" [ngTemplateOutletContext]="{ item, compact: true }" />
+        }
+      </div>
+    } @else {
+      <details
+        routerLinkActive="text-zinc-950 dark:text-zinc-50"
+        open
+        class="space-y-1 text-zinc-600 dark:text-zinc-400"
+      >
+        <summary
+          class="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-lg px-3 text-xs font-semibold ui-focus-ring"
+        >
+          <span i18n="@@shellWorkspace">Workspace</span>
+
+          <svg
+            viewBox="0 0 24 24"
+            class="size-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </summary>
+
+        @for (item of primaryItems(); track item.path) {
+          <ng-container [ngTemplateOutlet]="workspaceLink" [ngTemplateOutletContext]="{ item }" />
+        }
+      </details>
+    }
+
+    <footer data-slot="footer" class="grid gap-1 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+      <button
+        appUI
+        type="button"
+        variant="ghost"
+        [size]="sidebarCompact() ? 'icon' : 'sm'"
+        popovertarget="workspace-account-popover"
+        [attr.aria-expanded]="accountOpen()"
+        [attr.aria-label]="accountMenu"
+        [attr.aria-describedby]="session.user()?.email ? 'workspace-account-identity' : null"
+        [attr.title]="sidebarCompact() ? accountMenu : null"
+        [class.bg-zinc-200]="accountRouteActive()"
+        [class.dark:bg-zinc-800]="accountRouteActive()"
+        [class.w-full]="!sidebarCompact()"
+        [class.justify-self-center]="sidebarCompact()"
+        class="gap-2"
+      >
+        <ng-container [ngTemplateOutlet]="accountAvatar" />
+
+        <span
+          id="workspace-account-identity"
+          class="min-w-0 flex-1 truncate text-left"
+          [class.sr-only]="sidebarCompact()"
+        >
+          {{ session.user()?.email || accountMenu }}
+        </span>
+
+        @if (!sidebarCompact()) {
+          <svg
+            class="size-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <path d="m7 9 5-5 5 5m-10 6 5 5 5-5" />
+          </svg>
+        }
+      </button>
+
+      <section
+        #desktopAccount
+        id="workspace-account-popover"
+        appUI="card"
+        padding="sm"
+        layout="plain"
+        tone="raised"
+        popover="auto"
+        [attr.aria-label]="accountMenu"
+        (toggle)="accountToggle($event)"
+        class="sidebar-account-popover"
+      >
+        <ng-container [ngTemplateOutlet]="accountLinks" [ngTemplateOutletContext]="{ desktop: true }" />
+      </section>
+
+      <app-privacy-link placement="sidebar" [compact]="sidebarCompact()" />
+    </footer>
+  </app-sidebar>
+
+  <header app-topbar compact>
+    <button
+      appUI
+      data-slot="title"
+      type="button"
+      variant="ghost"
+      size="icon"
+      class="max-lg:hidden lg:inline-flex"
+      aria-controls="workspace-sidebar-navigation"
+      [attr.aria-expanded]="!sidebarCompact()"
+      [attr.aria-label]="sidebarCompact() ? expandSidebar : collapseSidebar"
+      [attr.title]="sidebarCompact() ? expandSidebar : collapseSidebar"
+      (click)="toggleSidebar()"
+    >
+      <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M3 5h18v14H3zM9 5v14" />
+      </svg>
+    </button>
+
+    <a
+      data-slot="title"
+      routerLink="/home"
+      class="mobile-brand inline-flex min-h-11 items-center rounded-lg ui-focus-ring lg:hidden"
+    >
+      <picture>
+        <source media="(min-width: 640px)" srcset="brand/logotype-nive.svg" />
+
+        <img
+          src="brand/isotype.svg"
+          alt="Nive"
+          width="175"
+          height="36"
+          class="h-9 w-9 object-contain sm:w-[175px] dark:invert"
+        />
+      </picture>
+    </a>
+
+    <div data-slot="actions" class="flex flex-wrap items-center gap-2 sm:gap-4">
+      <app-vault-sync-indicator />
+
+      <app-browser-privacy />
+
+      <app-language-switcher />
+
+      <button app-theme-switcher aria-label="Dark theme" i18n-aria-label="@@themeToggle"></button>
+    </div>
+  </header>
+
+  <div class="flex min-w-0 flex-col gap-6">
+    <app-auth-feedback [action]="action" />
+
+    @if (navigation.notificationFailed()) {
+      <div appUI="alert" role="status" i18n="@@authNotificationFailed">
+        The change was saved, but the notification could not be sent.
+      </div>
+    }
+
+    @if (session.full()) {
+      @for (user of [session.user()]; track user?.id) {
+        <router-outlet class="hidden" />
+      }
+    } @else {
+      <p role="status" i18n="@@authSessionUnavailable">
+        Your session changed or we couldn’t verify it. Sign in again to continue.
+      </p>
+
+      <a appUI routerLink="/auth/sign-in" i18n="@@authBackSignIn">Back to sign in</a>
+    }
+  </div>
+
+  <app-consent-notice class="block [--ui-consent-bottom:7rem]" />
+
+  <nav appUI="navbar" aria-label="Primary navigation" i18n-aria-label="@@shellPrimary">
+    @for (item of navbarItems; track item.path) {
+      <a
+        appUI="nav-item"
+        placement="navbar"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+      >
+        <svg
+          data-slot="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path [attr.d]="item.icon" />
+        </svg>
+
+        <span>{{ item.label }}</span>
+      </a>
+    }
+
+    <button
+      appUI="nav-item"
+      placement="navbar"
+      type="button"
+      (click)="mobileMenu.showModal()"
+      aria-haspopup="dialog"
+      aria-controls="mobile-navigation"
+    >
+      <svg data-slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+
+      <span i18n="@@shellMenu">Menu</span>
+    </button>
+  </nav>
+</app-shell>
+
+<dialog
+  appUI
+  #mobileMenu="appUIDialog"
+  id="mobile-navigation"
+  aria-labelledby="mobile-navigation-title"
+  class="mobile-navigation"
+>
+  <header class="flex items-center justify-between gap-3">
+    <h2 id="mobile-navigation-title" class="sr-only" i18n="@@shellPrimary">Primary navigation</h2>
+
+    <button
+      appUI
+      class="order-last"
+      variant="ghost"
+      size="icon"
+      (click)="mobileMenu.close()"
+      aria-label="Close navigation"
+      i18n-aria-label="@@shellCloseNavigation"
+    >
+      <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="m6 6 12 12M6 18 18 6" />
+      </svg>
+    </button>
+
+    <a
+      routerLink="/home"
+      (click)="mobileMenu.close()"
+      class="inline-flex min-h-11 items-center rounded-lg ui-focus-ring"
+    >
+      <img
+        src="brand/logotype-nive.svg"
+        alt="Nive"
+        width="175"
+        height="36"
+        class="h-9 w-[175px] object-contain dark:invert"
+      />
+    </a>
+  </header>
+
+  <nav class="space-y-2" aria-label="Primary navigation" i18n-aria-label="@@shellPrimary">
+    @for (item of primaryItems(); track item.path) {
+      <a
+        appUI="nav-item"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        (click)="mobileMenu.close()"
+      >
+        <svg
+          data-slot="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path [attr.d]="item.icon" />
+        </svg>
+
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <footer class="mt-auto space-y-1 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+    <details appUI appearance="subtle" class="group/account">
+      <summary
+        [attr.aria-label]="accountMenu"
+        [attr.aria-describedby]="session.user()?.email ? 'mobile-account-identity' : null"
+        class="flex list-none items-center gap-3 [&::-webkit-details-marker]:hidden"
+      >
+        <span class="flex min-w-0 flex-1 items-center gap-2">
+          <ng-container [ngTemplateOutlet]="accountAvatar" />
+
+          <span id="mobile-account-identity" class="truncate">{{ session.user()?.email || accountMenu }}</span>
+        </span>
+
+        <svg
+          class="size-4 shrink-0 group-open/account:rotate-180"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </summary>
+
+      <ng-container [ngTemplateOutlet]="accountLinks" [ngTemplateOutletContext]="{ desktop: false }" />
+    </details>
+
+    <app-privacy-link class="block" placement="sidebar" />
+  </footer>
+</dialog>
+
+<ng-template #workspaceLink let-item="item" let-compact="compact">
+  <a
+    appUI="nav-item"
+    [routerLink]="item.path"
+    routerLinkActive="active"
+    ariaCurrentWhenActive="page"
+    [compact]="compact"
+    [attr.title]="compact ? item.label : null"
+  >
+    <svg data-slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path [attr.d]="item.icon" />
+    </svg>
+
+    <span data-slot="label" class="min-w-0 truncate">{{ item.label }}</span>
+  </a>
+</ng-template>
+
+<ng-template #accountAvatar>
+  <span appUI="avatar" uiSize="sm" shape="rounded" aria-hidden="true">
+    @if (accountGlyph()) {
+      {{ accountGlyph() }}
+    } @else {
+      <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M20 21v-2a7 7 0 0 0-14 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" />
+      </svg>
+    }
+  </span>
+</ng-template>
+
+<ng-template #accountLinks let-desktop="desktop">
+  <nav class="space-y-1" [attr.aria-label]="accountMenu">
+    <a
+      appUI="nav-item"
+      routerLink="/account"
+      routerLinkActive="active"
+      ariaCurrentWhenActive="page"
+      (click)="closeAccount(desktop)"
+    >
+      <svg data-slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M20 21v-2a7 7 0 0 0-14 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" />
+      </svg>
+
+      <span i18n="@@authAccount">Account</span>
+    </a>
+
+    <a
+      appUI="nav-item"
+      routerLink="/security"
+      [routerLinkActiveOptions]="{ exact: true }"
+      routerLinkActive="active"
+      ariaCurrentWhenActive="page"
+      (click)="closeAccount(desktop)"
+    >
+      <svg data-slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z" />
+      </svg>
+
+      <span i18n="@@authSecurity">Security</span>
+    </a>
+
+    <details
+      class="group/security space-y-1"
+      routerLinkActive="[&>summary]:font-semibold [&>summary]:text-blue-700 dark:[&>summary]:text-blue-300"
+    >
+      <summary appUI="nav-item" class="list-none [&::-webkit-details-marker]:hidden">
+        <svg
+          data-slot="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4" />
+        </svg>
+
+        <span class="min-w-0 flex-1" i18n="@@shellSecuritySettings">Security settings</span>
+
+        <svg
+          class="size-4 shrink-0 group-open/security:rotate-180"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </summary>
+
+      <div class="ms-3 border-s border-zinc-200 ps-2 dark:border-zinc-700">
+        @for (item of securityItems; track item.path) {
+          <a
+            appUI="nav-item"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            (click)="closeAccount(desktop)"
+          >
+            {{ item.label }}
+          </a>
+        }
+      </div>
+    </details>
+  </nav>
+
+  <div class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
+    @if (canLockVault()) {
+      <button
+        appUI
+        type="button"
+        size="sm"
+        variant="ghost"
+        class="w-full justify-start"
+        (click)="closeAccount(desktop); vault.lock()"
+        i18n="@@vaultLockNow"
+      >
+        Lock vault now
+      </button>
+    }
+
+    <button
+      appUI
+      type="button"
+      size="sm"
+      variant="ghost"
+      class="w-full justify-start gap-3"
+      [disabled]="action.busy()"
+      [attr.aria-busy]="action.pending() === 'logout'"
+      (click)="closeAccount(desktop); logout()"
+    >
+      <svg
+        data-slot="icon"
+        class="size-5 shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path d="M10 4H4v16h6m-1-8h11m-4-4 4 4-4 4" />
+      </svg>
+
+      <span>{{ signOutLabel }}</span>
+    </button>
+  </div>
+</ng-template>

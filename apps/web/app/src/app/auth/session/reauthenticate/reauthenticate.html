@@ -1,0 +1,124 @@
+<section class="flex min-w-0 flex-col gap-6">
+  <header class="space-y-3">
+    <h1 appUI appNavigationHeading [appHeadingFocus]="embedded()">{{ heading() }}</h1>
+
+    <p appUI tone="muted">{{ description() }}</p>
+  </header>
+
+  @if (pending()) {
+    @if (pending()?.method === 'google') {
+      <p appUI tone="muted" i18n="@@authGoogleVerifyDescription">
+        Enter the code we sent to your email to finish signing in with Google.
+      </p>
+    }
+
+    <app-code-entry
+      [backup]="backup()"
+      [busy]="action.busy()"
+      (confirmed)="verify($event)"
+      [loading]="action.pending() === 'verify'"
+    />
+
+    @if (pending()?.factor === 'email') {
+      <app-resend-code />
+    } @else {
+      <button
+        appUI
+        variant="secondary"
+        [disabled]="action.busy()"
+        (click)="switchVerificationMethod()"
+        i18n="@@authSwitchFactor"
+        class="w-full"
+      >
+        Change verification method
+      </button>
+    }
+  } @else {
+    @if (methods()?.passkeys?.length) {
+      <button
+        appUI
+        class="w-full"
+        [disabled]="action.busy()"
+        (click)="passkey()"
+        i18n="@@authConfirmPasskey"
+        [attr.aria-busy]="action.pending() === 'passkey'"
+      >
+        Confirm with a passkey
+      </button>
+    }
+
+    @if (methods()?.google?.length && session.providers()?.google?.enabled) {
+      <app-google-button
+        [disabled]="action.busy()"
+        (processing)="action.setProcessing($event)"
+        intent="reauth"
+        (completed)="google($event)"
+      />
+    }
+
+    @if (methods()?.password) {
+      <details appUI [open]="!otherMethods()">
+        <summary i18n="@@authUseCurrentPassword">Use your current password</summary>
+
+        <form novalidate [attr.data-submitted]="attempted() ? '' : null" class="space-y-4" (submit)="password($event)">
+          <app-field
+            #field="appField"
+            control-id="reauth-password"
+            [label]="passwordLabel"
+            [error]="fields.password().errors()[0]?.message ?? ''"
+          >
+            <div class="relative">
+              <input
+                appUI
+                class="pr-24"
+                id="reauth-password"
+                [type]="visible() ? 'text' : 'password'"
+                autocomplete="current-password"
+                [formField]="fields.password"
+                [attr.aria-invalid]="fields.password().touched() && fields.password().invalid()"
+                [attr.aria-describedby]="field.describedBy()"
+              />
+
+              <button
+                appUI
+                variant="ghost"
+                size="sm"
+                type="button"
+                class="absolute inset-y-0 right-0 min-w-16"
+                [attr.aria-pressed]="visible()"
+                aria-controls="reauth-password"
+                aria-label="Show or hide password"
+                i18n-aria-label="@@authTogglePassword"
+                (click)="togglePasswordVisibility()"
+              >
+                {{ visible() ? hideLabel : showLabel }}
+              </button>
+            </div>
+          </app-field>
+
+          <button
+            appUI
+            type="submit"
+            [variant]="otherMethods() ? 'secondary' : 'primary'"
+            class="w-full"
+            [disabled]="action.busy()"
+            i18n="@@authConfirmPassword"
+            [attr.aria-busy]="action.pending() === 'password'"
+          >
+            Continue
+          </button>
+        </form>
+      </details>
+    }
+  }
+
+  <app-auth-feedback [action]="action" />
+
+  @if (embedded()) {
+    <button appUI variant="secondary" [disabled]="action.busy()" (click)="cancel()" i18n="@@authCancel">Cancel</button>
+  } @else {
+    <a appUI [routerLink]="navigation.returnLink()" i18n="@@authCancel" class="inline-flex min-h-11 items-center">
+      Cancel
+    </a>
+  }
+</section>

@@ -1,0 +1,87 @@
+<section class="flex min-w-0 flex-col gap-6">
+  <h1 appUI appNavigationHeading i18n="@@authRecoveryVerifyTitle">Verify recovery</h1>
+
+  @if (journey.challenge()?.purpose === 'recovery') {
+    <p appUI tone="muted" i18n="@@authRecoveryProofHint">
+      Enter the code from your email. If you set up an authenticator app, enter its code or a backup code too.
+    </p>
+
+    <form novalidate class="space-y-5" [attr.data-submitted]="attempted() ? '' : null" (submit)="verify($event)">
+      <app-field
+        control-id="recovery-email-code"
+        [label]="emailLabel"
+        [description]="codeLength"
+        data-show-error
+        [invalid]="attempted() && fields.code().invalid()"
+        [error]="attempted() ? (fields.code().errors()[0]?.message ?? '') : ''"
+      >
+        <app-pin-input [formField]="fields.code" type="text" autocomplete="one-time-code" accept-formatted-paste />
+      </app-field>
+
+      <app-field control-id="recovery-factor-kind" [label]="factorLabel">
+        <select appUI id="recovery-factor-kind" [formField]="fields.kind" (change)="changeFactor()">
+          <option value="none" i18n="@@authNoExtraFactor">No additional code</option>
+
+          <option value="totp" i18n="@@authAuthenticator">Authenticator app</option>
+
+          <option value="recovery_code" i18n="@@authBackupCode">Backup code</option>
+        </select>
+      </app-field>
+
+      @if (model().kind !== 'none') {
+        <app-field
+          #factorField="appField"
+          control-id="recovery-factor"
+          [label]="factorLabel"
+          [description]="model().kind === 'totp' ? codeLength : ''"
+          data-show-error
+          [invalid]="attempted() && fields.factor().invalid()"
+          [error]="attempted() ? (fields.factor().errors()[0]?.message ?? '') : ''"
+        >
+          @if (model().kind === 'totp') {
+            <app-pin-input [formField]="fields.factor" type="text" accept-formatted-paste />
+          } @else {
+            <input
+              appUI
+              id="recovery-factor"
+              [formField]="fields.factor"
+              autocomplete="off"
+              placeholder=" "
+              [attr.aria-describedby]="factorField.describedBy()"
+              [attr.aria-invalid]="factorField.invalid()"
+            />
+          }
+        </app-field>
+      }
+
+      <button
+        appUI
+        type="submit"
+        class="w-full"
+        [disabled]="action.busy()"
+        i18n="@@authVerify"
+        [attr.aria-busy]="action.pending() === 'verify'"
+      >
+        Verify
+      </button>
+    </form>
+
+    <app-resend-code />
+  } @else {
+    <div appUI="alert" tone="warning" role="status" i18n="@@authRestartChallenge">
+      We couldn’t resume verification. Start again to request a new code.
+    </div>
+  }
+
+  <app-auth-feedback [action]="action" />
+
+  <a
+    appUI="button"
+    [variant]="journey.challenge()?.purpose === 'recovery' ? 'secondary' : 'primary'"
+    routerLink="/auth/recovery"
+    i18n="@@authStartAgain"
+    class="inline-flex min-h-11 items-center"
+  >
+    Start again
+  </a>
+</section>

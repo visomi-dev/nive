@@ -1,0 +1,127 @@
+---
+import { languageSwitcher, linkButton } from '@visomi-stack/web-frontend-ui';
+import ThemeSwitcher from '../theme-switcher.astro';
+import Container from '../container.astro';
+import Text from '../text.astro';
+import Brand from './brand.astro';
+import BrowserPrivacy from './browser-privacy.astro';
+import Link from '../link.astro';
+import LinkButton from '../link-button.astro';
+import Icon from './icon.astro';
+import { applicationPath, siteCopy, sitePath, type SiteLocale, type SitePage } from '../../content/site';
+type Props = { locale: SiteLocale; page: SitePage | 'privacy' };
+const { locale, page } = Astro.props;
+const copy = siteCopy[locale];
+const pages = ['home', 'architecture', 'docs', 'ui'] as const;
+const language = locale === 'en' ? 'es' : 'en';
+const languages = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+] as const;
+const languagePath = Astro.url.pathname.replace(/^\/(en|es)(?=\/)/, `/${language}`) + Astro.url.search;
+---
+
+<header
+  class="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 dark:border-zinc-800 dark:bg-zinc-950/95"
+  data-site-header
+>
+  <Container as="div" width="xl" gutter="compact" class="flex min-h-20 items-center justify-between gap-2">
+    <Brand locale={locale} compact />
+
+    <nav aria-label={copy.menu} class="hidden xl:flex xl:items-center xl:gap-1">
+      {pages.map((destination) => (
+        <Link
+          href={sitePath(locale, destination)}
+          variant="muted"
+          underline="none"
+          class="inline-flex min-h-11 items-center px-3 text-sm"
+          aria-current={page === destination ? 'page' : undefined}
+        >
+          {copy.nav[destination]}
+        </Link>
+      ))}
+    </nav>
+
+    <div class="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3 xl:flex-nowrap">
+      <div class="hidden xl:mr-3 xl:block">
+        <LinkButton href={applicationPath(locale)} size="sm" class="whitespace-nowrap">
+          {copy.openApp}
+        </LinkButton>
+      </div>
+
+      <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+        <nav class="inline-flex items-center" aria-label={copy.language}>
+          <Icon name="languages" class={languageSwitcher.iconClasses()} />
+
+          <ul class={languageSwitcher.classes()}>
+            {languages.map(({ code, label }) => (
+              <li>
+                {code === locale ? (
+                  <span
+                    class={languageSwitcher.optionClasses(true)}
+                    lang={code}
+                    aria-current="true"
+                    data-current-language
+                  >
+                    {label}
+                  </span>
+                ) : (
+                  <a
+                    href={languagePath}
+                    hreflang={code}
+                    lang={code}
+                    rel="alternate"
+                    class={languageSwitcher.optionClasses(false)}
+                    data-language-switcher
+                  >
+                    {label}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <ThemeSwitcher label={copy.themeToggle} />
+      </div>
+
+      <details class="group xl:hidden" data-site-menu>
+        <summary
+          class:list={[
+            linkButton.classes({ variant: 'secondary', size: 'icon' }),
+            'cursor-pointer list-none [&::-webkit-details-marker]:hidden',
+          ]}
+        >
+          <Text as="span" ui-size="inherit" tone="inherit" class="sr-only">
+            {copy.menu}
+          </Text>
+
+          <Icon name="menu" />
+        </summary>
+
+        <nav
+          aria-label={copy.menu}
+          class="absolute inset-x-0 top-full grid w-full gap-1 border-b border-zinc-200 bg-white p-5 shadow-xl shadow-zinc-950/10 sm:px-8 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          {pages.map((destination) => (
+            <Link
+              href={sitePath(locale, destination)}
+              variant="muted"
+              underline="none"
+              class="inline-flex min-h-11 items-center px-3 text-sm"
+              aria-current={page === destination ? 'page' : undefined}
+            >
+              {copy.nav[destination]}
+            </Link>
+          ))}
+
+          <LinkButton href={applicationPath(locale)} size="sm" class="mt-1">
+            {copy.openApp}
+          </LinkButton>
+        </nav>
+      </details>
+
+      <BrowserPrivacy locale={locale} />
+    </div>
+  </Container>
+</header>

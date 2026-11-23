@@ -1,0 +1,58 @@
+<section class="flex max-w-lg min-w-0 flex-col gap-6">
+  <header class="space-y-3">
+    <h1 appUI appNavigationHeading i18n="@@authReviewDeviceTitle">Review a device request</h1>
+
+    <p appUI tone="muted" i18n="@@authReviewDeviceWarning">
+      Approve only if you started this request. Approval lets someone set up a new sign-in method for your account.
+    </p>
+  </header>
+
+  @if (status() === 'pending') {
+    <form novalidate class="space-y-5" [attr.data-submitted]="attempted() ? '' : null" (submit)="decide($event, true)">
+      <app-field
+        control-id="device-pairing-code"
+        [label]="codeLabel"
+        [description]="codeLength"
+        data-show-error
+        [invalid]="attempted() && fields.code().invalid()"
+        [error]="attempted() ? (fields.code().errors()[0]?.message ?? '') : ''"
+      >
+        <app-pin-input [formField]="fields.code" type="text" accept-formatted-paste />
+      </app-field>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <button
+          appUI
+          type="submit"
+          [disabled]="action.busy()"
+          i18n="@@authApproveDevice"
+          [attr.aria-busy]="action.pending() === 'approve'"
+        >
+          Approve request
+        </button>
+
+        <button
+          appUI
+          type="button"
+          variant="danger"
+          [disabled]="action.busy()"
+          (click)="decide($event, false)"
+          i18n="@@authDenyDevice"
+          [attr.aria-busy]="action.pending() === 'deny'"
+        >
+          Deny request
+        </button>
+      </div>
+    </form>
+  } @else if (status()) {
+    <p role="status" i18n="@@authDeviceReviewComplete">This request is no longer pending.</p>
+  } @else if (!requestId()) {
+    <p role="status" i18n="@@authDeviceLinkInvalid">Open the link shown on the device that requested access.</p>
+  }
+
+  <app-auth-feedback [action]="action" />
+
+  <a appUI routerLink="/security" i18n="@@authBackSecurity" class="inline-flex min-h-11 items-center">
+    Back to security
+  </a>
+</section>

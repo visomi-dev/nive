@@ -1,0 +1,113 @@
+---
+import { container } from '@visomi-stack/web-frontend-ui';
+import Label from '../../components/label.astro';
+import ThemeSelect from '../../components/theme-select.astro';
+import Card from '../../components/card.astro';
+import Text from '../../components/text.astro';
+import Heading from '../../components/heading.astro';
+import BaseLayout from '../../layouts/base.astro';
+import BrowserPrivacy from '../../components/site/browser-privacy.astro';
+
+import Button from '../../components/button.astro';
+import Link from '../../components/link.astro';
+import demoScript from '../../scripts/button-demo.js?url&no-inline';
+
+const locale = Astro.params.locale;
+if (locale !== 'en' && locale !== 'es') return new Response(null, { status: 404 });
+const spanish = locale === 'es';
+const text = spanish
+  ? {
+      title: 'Estilos del botón compartido',
+      description: 'Controles nativos de Astro con las mismas clases Tailwind que la aplicación Angular.',
+      increment: 'Sumar uno',
+      reset: 'Reiniciar',
+      disabled: 'No disponible',
+      submit: 'Enviar formulario',
+      submitted: 'Formulario enviado.',
+      count: 'Activaciones:',
+      home: 'Volver a los fundamentos',
+      theme: 'Apariencia',
+      system: 'Sistema',
+      light: 'Claro',
+      dark: 'Oscuro',
+    }
+  : {
+      title: 'Shared button styles',
+      description: 'Native Astro controls using the same Tailwind classes as the Angular application.',
+      increment: 'Add one',
+      reset: 'Reset',
+      disabled: 'Unavailable',
+      submit: 'Submit form',
+      submitted: 'Form submitted.',
+      count: 'Activations:',
+      home: 'Back to foundations',
+      theme: 'Appearance',
+      system: 'System',
+      light: 'Light',
+      dark: 'Dark',
+    };
+---
+
+<BaseLayout locale={locale} title={text.title}>
+  <script slot="head" is:inline type="module" src={demoScript}></script>
+
+  <main class:list={[container.classes(), 'py-12']}>
+    <header class="flex flex-wrap items-center justify-between gap-2">
+      <Link href={`/${locale}/foundations/`}>{text.home}</Link>
+
+      <BrowserPrivacy locale={locale} />
+    </header>
+
+    <Heading as="h1" ui-size="title" class="mt-8">
+      {text.title}
+    </Heading>
+
+    <Text ui-size="inherit" tone="muted" class="mt-4 max-w-2xl">
+      {text.description}
+    </Text>
+
+    <Card as="section" tone="default" padding="lg" layout="plain" data-button-demo class="mt-8">
+      <div class="flex flex-wrap gap-4">
+        <Button data-increment>{text.increment}</Button>
+
+        <Button variant="secondary" size="sm" data-reset>
+          {text.reset}
+        </Button>
+
+        <Button disabled data-disabled>
+          {text.disabled}
+        </Button>
+      </div>
+
+      <Text ui-size="inherit" tone="inherit" class="mt-5">
+        <span class="me-1">{text.count}</span>
+
+        <output aria-live="polite" data-count>
+          0
+        </output>
+      </Text>
+
+      <form method="get" action={`/${locale}/button/`} class="mt-6">
+        <Button type="submit" name="action" value="submit" variant="secondary" size="sm">
+          {text.submit}
+        </Button>
+      </form>
+
+      <Text ui-size="inherit" tone="inherit" role="status" class="mt-4">
+        {Astro.url.searchParams.get('action') === 'submit' ? text.submitted : ''}
+      </Text>
+    </Card>
+
+    <Label inline class="mt-8">
+      {text.theme}
+
+      <ThemeSelect ui-size="xs" inline>
+        <option value="system">{text.system}</option>
+
+        <option value="light">{text.light}</option>
+
+        <option value="dark">{text.dark}</option>
+      </ThemeSelect>
+    </Label>
+  </main>
+</BaseLayout>

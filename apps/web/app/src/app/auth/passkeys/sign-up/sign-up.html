@@ -1,0 +1,53 @@
+<section class="flex min-w-0 flex-col gap-6">
+  <header class="space-y-3">
+    <h1 appUI appNavigationHeading i18n="@@authSignUpHeading">Create an account</h1>
+
+    <p appUI tone="muted" i18n="@@authSignUpDescription">Set up a passkey and verify your email.</p>
+  </header>
+
+  <app-email-entry
+    [busy]="action.busy()"
+    [label]="createLabel"
+    (confirmed)="register($event)"
+    [loading]="action.pending() === 'register'"
+  />
+
+  <app-auth-feedback [action]="action" />
+
+  @if (session.providers()?.google?.enabled || session.providersLoading()) {
+    <app-google-button
+      [checking]="!session.providers()?.google?.enabled"
+      [disabled]="action.busy()"
+      (processing)="action.setProcessing($event)"
+      (completed)="google($event)"
+    />
+  }
+
+  <a
+    appUI
+    routerLink="/auth/sign-up/password"
+    [queryParams]="navigation.returnQuery()"
+    class="inline-flex min-h-11 items-center justify-center text-center"
+    i18n="@@authSignUpPassword"
+  >
+    Create an account with a password
+  </a>
+
+  <footer
+    class="flex flex-col items-center gap-3 border-t border-zinc-200 pt-5 text-center text-sm dark:border-zinc-800"
+  >
+    <p class="flex flex-wrap items-center justify-center gap-x-1">
+      <span i18n="@@authAlreadyAccount">Already have an account?</span>
+
+      <a
+        appUI
+        routerLink="/auth/sign-in"
+        [queryParams]="navigation.returnQuery()"
+        class="inline-flex min-h-11 items-center justify-center text-center"
+        i18n="@@authSignIn"
+      >
+        Sign in
+      </a>
+    </p>
+  </footer>
+</section>

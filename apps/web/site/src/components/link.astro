@@ -1,0 +1,13 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import { link as styles, type LinkVariant, type LinkUnderline } from '@visomi-stack/web-frontend-ui';
+
+type Props = HTMLAttributes<'a'> & { href: string; variant?: LinkVariant; underline?: LinkUnderline };
+
+const { variant = 'default', underline = 'always', class: className, ...attributes } = Astro.props;
+---
+
+<a {...attributes} class:list={[styles.classes({ variant, underline }), className]}>
+  <slot />
+</a>

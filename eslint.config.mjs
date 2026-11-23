@@ -1,0 +1,476 @@
+import { configs as nxConfigs } from '@nx/eslint-plugin';
+import { templateParser } from 'angular-eslint';
+import stylistic from '@stylistic/eslint-plugin';
+import * as tsParser from '@typescript-eslint/parser';
+import eslintConfigPrettier from 'eslint-config-prettier/flat';
+import { configs as astroConfigs } from 'eslint-plugin-astro';
+import { importX } from 'eslint-plugin-import-x';
+import perfectionist from 'eslint-plugin-perfectionist';
+import eslintPluginUnicorn from 'eslint-plugin-unicorn';
+import globals from 'globals';
+
+import templateSiblingNewlines from './tools/lint-rules/template-sibling-newlines.mjs';
+
+const importXFiles = ['**/*.ts', '**/*.tsx', '**/*.cts', '**/*.mts', '**/*.js', '**/*.jsx', '**/*.cjs', '**/*.mjs'];
+
+const functionOrClassDeclaration = {
+  selector:
+    ':matches(FunctionDeclaration, ClassDeclaration, ExportNamedDeclaration[declaration.type=/^(FunctionDeclaration|ClassDeclaration)$/], ExportDefaultDeclaration[declaration.type=/^(FunctionDeclaration|ClassDeclaration)$/])',
+};
+const awaitedStatement = { selector: 'ExpressionStatement[expression.type="AwaitExpression"]' };
+
+const propertyVisibility = ['private', 'protected', 'public'];
+const angularPropertyGroups = [
+  {
+    groupName: 'injected-dependencies',
+    selector: 'property',
+    elementValuePattern: '^inject(?:<[^>]*>)?\\s*\\(',
+  },
+  {
+    groupName: 'angular-bindings',
+    selector: 'property',
+    elementValuePattern:
+      '^(?:input|output|model|viewChild|viewChildren|contentChild|contentChildren)(?:\\.required)?(?:<[^>]*>)?\\s*\\(',
+  },
+  {
+    groupName: 'angular-state',
+    selector: 'property',
+    elementValuePattern: '^(?:signal|linkedSignal|toSignal)(?:<[^>]*>)?\\s*\\(',
+  },
+  {
+    groupName: 'angular-forms',
+    selector: 'property',
+    elementValuePattern: '^form(?:<[^>]*>)?\\s*\\(',
+  },
+  {
+    groupName: 'angular-computed',
+    selector: 'property',
+    elementValuePattern: '^computed(?:<[^>]*>)?\\s*\\(',
+  },
+];
+
+export const statementPadding = [
+  'error',
+  { blankLine: 'always', prev: ['const', 'let', 'var'], next: '*' },
+  { blankLine: 'any', prev: ['const', 'let', 'var'], next: ['const', 'let', 'var'] },
+  // Separate the import block from code without splitting imports or their attached comments.
+  { blankLine: 'always', prev: 'import', next: '*' },
+  { blankLine: 'any', prev: 'import', next: 'import' },
+  { blankLine: 'always', prev: 'export', next: 'expression' },
+  { blankLine: 'always', prev: '*', next: functionOrClassDeclaration },
+  { blankLine: 'always', prev: '*', next: awaitedStatement },
+  { blankLine: 'always', prev: awaitedStatement, next: '*' },
+  { blankLine: 'always', prev: '*', next: ['return', 'throw'] },
+  { blankLine: 'always', prev: '*', next: 'if' },
+  { blankLine: 'always', prev: 'if', next: '*' },
+  { blankLine: 'always', prev: '*', next: 'try' },
+];
+
+export const moduleBoundaryOptions = {
+  enforceBuildableLibDependency: true,
+  // The vault entrypoint has no Dexie dependency; its separate storage entrypoint loads on demand.
+  checkDynamicDependenciesExceptions: ['web-shared-common', '@visomi-stack/web-frontend-db'],
+  // template.json is a public workspace build input, not another domain's implementation.
+  allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^(?:\\.\\./)+template\\.json$'],
+  depConstraints: [
+    { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
+    { sourceTag: 'scope:backend', onlyDependOnLibsWithTags: ['scope:backend', 'scope:shared'] },
+    {
+      sourceTag: 'scope:web-frontend',
+      onlyDependOnLibsWithTags: ['scope:web-frontend', 'scope:web-shared', 'scope:shared'],
+    },
+    {
+      sourceTag: 'scope:web-shared',
+      onlyDependOnLibsWithTags: ['scope:web-shared', 'scope:shared'],
+    },
+    {
+      sourceTag: 'scope:web-backend',
+      notDependOnLibsWithTags: ['scope:web-frontend'],
+    },
+    {
+      sourceTag: '*',
+      onlyDependOnLibsWithTags: ['*'],
+    },
+  ],
+};
+
+export default [
+  ...nxConfigs['flat/base'],
+  ...nxConfigs['flat/typescript'],
+  ...nxConfigs['flat/javascript'],
+  ...astroConfigs.base,
+  eslintConfigPrettier,
+  {
+    files: ['**/*.html'],
+    languageOptions: { parser: templateParser },
+  },
+  {
+    files: ['**/*.html', '**/*.astro'],
+    plugins: { workspace: { rules: { 'template-sibling-newlines': templateSiblingNewlines } } },
+    rules: { 'workspace/template-sibling-newlines': 'error' },
+  },
+  {
+    ...importX.flatConfigs.recommended,
+    files: importXFiles,
+  },
+  {
+    ...importX.flatConfigs.typescript,
+    files: importXFiles,
+  },
+  {
+    ignores: ['**/dist', '**/vite.config.*.timestamp*', '**/vitest.config.*.timestamp*', '**/node_modules'],
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    rules: {
+      '@nx/enforce-module-boundaries': ['error', moduleBoundaryOptions],
+    },
+  },
+  {
+    files: importXFiles,
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: globals.builtin,
+    },
+    plugins: {
+      unicorn: eslintPluginUnicorn,
+      perfectionist,
+      '@stylistic': stylistic,
+    },
+    settings: {
+      'import-x/ignore': ['^astro:'],
+      // Keep workspace alias grouping independent of the lint cwd and generated resolver paths.
+      'import-x/internal-regex':
+        '^(?:@visomi-stack/(?:web-frontend-ui|web-shared-observability)|web-shared|web-shared-common|web-frontend-shared|web-backend-shared)(?:/|$)',
+    },
+    rules: {
+      '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+      '@stylistic/lines-between-class-members': 'off',
+      'perfectionist/sort-classes': [
+        'error',
+        {
+          // Group properties by visibility, then role; initialization dependencies still take precedence.
+          type: 'unsorted',
+          // Keep fields compact within groups and separate behavioral members.
+          newlinesBetween: 1,
+          newlinesInside: 0,
+          newlinesBetweenOverloadSignatures: 0,
+          groups: [
+            'index-signature',
+            ...propertyVisibility.map((visibility) => `${visibility}-static-property`),
+            { group: 'static-block', newlinesInside: 1 },
+            ...propertyVisibility.flatMap((visibility) => [
+              ...angularPropertyGroups.map(({ groupName }) => `${visibility}-${groupName}`),
+              `${visibility}-readonly-property`,
+              `${visibility}-property`,
+            ]),
+            'constructor',
+            {
+              group: ['public-get-method', 'public-set-method', 'public-method', 'public-function-property'],
+              newlinesInside: 1,
+            },
+            {
+              group: [
+                'protected-get-method',
+                'protected-set-method',
+                'protected-method',
+                'protected-function-property',
+              ],
+              newlinesInside: 1,
+            },
+            {
+              group: ['private-get-method', 'private-set-method', 'private-method', 'private-function-property'],
+              newlinesInside: 1,
+            },
+            'unknown',
+            ...propertyVisibility.map((visibility) => ({ group: `${visibility}-angular-effects`, newlinesInside: 1 })),
+          ],
+          customGroups: [
+            ...propertyVisibility.flatMap((visibility) => [
+              {
+                groupName: `${visibility}-static-property`,
+                selector: 'property',
+                modifiers: [visibility, 'static'],
+              },
+              ...angularPropertyGroups.map((group) => ({
+                ...group,
+                groupName: `${visibility}-${group.groupName}`,
+                modifiers: [visibility],
+              })),
+              {
+                groupName: `${visibility}-angular-effects`,
+                selector: 'property',
+                modifiers: [visibility],
+                elementValuePattern: '^(?:effect|afterRenderEffect|afterNextRender|afterEveryRender)\\s*\\(',
+              },
+            ]),
+          ],
+        },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'all',
+          argsIgnorePattern: '^_',
+          caughtErrors: 'all',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'import-x/order': [
+        'error',
+        {
+          'newlines-between': 'always',
+          // Classify workspace source aliases consistently from root hooks and project-level Nx tasks.
+          pathGroups: [
+            { pattern: '@visomi-stack/dev-testing{,/**}', group: 'external' },
+            { pattern: '@visomi-stack/backend-{db,shared}{,/**}', group: 'external' },
+            { pattern: '@visomi-stack/shared-db', group: 'external' },
+            { pattern: '@visomi-stack/web-frontend-db{,/**}', group: 'external' },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin'],
+        },
+      ],
+      'import-x/no-named-as-default': 'off',
+      'import-x/no-duplicates': 'error',
+      'import-x/no-unresolved': 'off',
+      'import-x/extensions': [
+        'error',
+        'never',
+        {
+          checkTypeImports: true,
+          ignorePackages: true,
+          pattern: {
+            json: 'always',
+            css: 'always',
+            astro: 'always',
+            mjs: 'always',
+            cjs: 'always',
+            mts: 'always',
+            cts: 'always',
+          },
+          fix: true,
+        },
+      ],
+      'unicorn/filename-case': [
+        'error',
+        {
+          case: 'kebabCase',
+        },
+      ],
+      'unicorn/no-null': 'off',
+      curly: ['error', 'all'],
+      '@stylistic/max-len': [
+        'error',
+        {
+          code: 120,
+          tabWidth: 2,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+        },
+      ],
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'ClassDeclaration:has(Decorator > CallExpression[callee.name="Component"]) > ClassBody CallExpression[callee.name="inject"][arguments.0.name=/^(HttpClient|DatabaseHttp|AuthHttp)$/]',
+          message: 'Components invoke domain services; network transport belongs in services.',
+        },
+        {
+          selector:
+            'ClassDeclaration:has(Decorator > CallExpression[callee.name=/^(Component|Directive|Service|Injectable)$/]) > ClassBody CallExpression[callee.name=/^(effect|afterRenderEffect|afterNextRender|afterEveryRender)$/]:not(PropertyDefinition[readonly=true] > CallExpression)',
+          message: 'Assign Angular effects and render hooks to readonly class properties, ordered after methods.',
+        },
+        {
+          selector:
+            'ClassDeclaration:has(Decorator > CallExpression[callee.name=/^(Component|Directive|Service|Injectable)$/]) > ClassBody CallExpression[callee.type="MemberExpression"][callee.property.name=/^(setAttribute|removeAttribute|querySelector|querySelectorAll)$/]',
+          message:
+            'Use Angular template/host bindings for attributes and view queries or host references for owned elements.',
+        },
+        {
+          selector:
+            ':matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression)[source.value=/^\\..*\\.[jt]sx?$/]',
+          message: 'Omit JavaScript and TypeScript file extensions from relative module imports and exports.',
+        },
+        {
+          selector:
+            'AwaitExpression:not(VariableDeclarator > AwaitExpression.init):not(ExpressionStatement > AwaitExpression.expression)',
+          message: 'Assign the awaited result to a variable before using it in another expression.',
+        },
+      ],
+      'padding-line-between-statements': 'off',
+      '@stylistic/padding-line-between-statements': statementPadding,
+    },
+  },
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts'],
+    rules: {
+      '@nx/enforce-module-boundaries': [
+        'error',
+        {
+          ...moduleBoundaryOptions,
+          // Storage tests inspect the same adapter that production opens dynamically.
+          checkDynamicDependenciesExceptions: [
+            ...moduleBoundaryOptions.checkDynamicDependenciesExceptions,
+            '@visomi-stack/web-frontend-db/storage',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/src/**/*.{ts,tsx,js,jsx}'],
+    ignores: ['**/*.spec.*', '**/*.test.*'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@visomi-stack/dev-testing', '@visomi-stack/dev-testing/*'],
+              message: 'Development testing helpers belong only in tests and fixtures.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    basePath: import.meta.dirname,
+    files: ['libs/shared/db/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@visomi-stack/dev-testing', '@visomi-stack/dev-testing/*'],
+              message: 'Development helpers belong only in tests and fixtures.',
+            },
+            {
+              group: ['node:*', '@angular/*', 'dexie', 'express', 'drizzle-orm', 'drizzle-orm/*'],
+              message: 'Shared database contracts must not depend on browser, server, or framework runtimes.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    basePath: import.meta.dirname,
+    files: ['libs/web/frontend/db/src/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@visomi-stack/dev-testing', '@visomi-stack/dev-testing/*'],
+              message: 'Development helpers belong only in tests and fixtures.',
+            },
+            {
+              group: ['node:*', '@angular/*', 'express', 'drizzle-orm', 'drizzle-orm/*'],
+              message: 'The browser database runtime is framework-independent and cannot import server adapters.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    basePath: import.meta.dirname,
+    files: ['apps/web/api/src/**/*.ts', 'libs/backend/{db,shared}/src/**/*.ts', 'libs/web/backend/shared/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@visomi-stack/dev-testing', '@visomi-stack/dev-testing/*'],
+              message: 'Development helpers belong only in tests and fixtures.',
+            },
+            { group: ['dexie'], message: 'Dexie belongs to the browser database adapter.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    basePath: import.meta.dirname,
+    files: ['apps/web/api/tests/integration/support/browser-server.ts'],
+    rules: {
+      // This fixture hosts a real browser; only its erased browser-client types cross the test boundary.
+      '@nx/enforce-module-boundaries': [
+        'error',
+        {
+          ...moduleBoundaryOptions,
+          allow: [
+            ...moduleBoundaryOptions.allow,
+            '@visomi-stack/web-frontend-db',
+            '@visomi-stack/web-frontend-db/storage',
+          ],
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@visomi-stack/web-frontend-db', '@visomi-stack/web-frontend-db/*'],
+              allowTypeImports: true,
+              message: 'Browser fixtures may import types, but must execute browser adapters in the browser.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/e2e/fixtures/**/*.ts'],
+    rules: {
+      // Playwright requires destructured fixture dependencies, including an empty dependency set.
+      'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }],
+    },
+  },
+  {
+    files: ['apps/web/site/**/*.ts'],
+    rules: {
+      'import-x/no-unresolved': [
+        'error',
+        {
+          ignore: ['^astro:'],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'libs/web/frontend/shared/src/**/*.ts',
+      'libs/web/frontend/ui/src/**/*.ts',
+      'libs/web/shared/observability/src/**/*.ts',
+    ],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*', '@angular/*', 'astro', 'astro/*', '@astrojs/*'],
+              message: 'Shared browser and portable code must use framework-agnostic, browser-compatible APIs.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+];

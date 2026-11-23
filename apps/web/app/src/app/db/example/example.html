@@ -1,0 +1,473 @@
+@if (workspace.backedSample) {
+  <h1 appUI appNavigationHeading class="mx-auto w-full max-w-xl" i18n="@@vaultDemoTitle">Vault example</h1>
+}
+
+<section
+  class="space-y-8 py-6"
+  [class.max-w-3xl]="!workspace.backedSample"
+  [class.mx-auto]="workspace.backedSample"
+  [class.max-w-xl]="workspace.backedSample"
+  [attr.aria-busy]="workspace.busy()"
+>
+  @let configuredVaultLocked = workspace.enrolled() && workspace.hasBinding() && !workspace.vaultReady();
+  @if (!configuredVaultLocked) {
+    <header class="space-y-3">
+      @if (workspace.backedSample) {
+        <p appUI tone="muted" i18n="@@vaultBackedSampleExplanation">
+          Write a note here and it backs up automatically. Your browser encrypts it before it leaves this device. You
+          can open the same note on a linked device.
+        </p>
+      } @else {
+        <h1 appUI appNavigationHeading i18n="@@persistenceExampleHeading">Hybrid persistence example</h1>
+
+        <p appUI tone="muted" i18n="@@persistenceExampleDescription">
+          This development example uses test workspaces. The service can read account identity and operational notes.
+          Unlock private resources separately on this device.
+        </p>
+      }
+    </header>
+  }
+
+  @if (workspace.backedSample && workspace.loading() && !workspace.available()) {
+    <p role="status" i18n="@@vaultLoading">Loading the vault…</p>
+  } @else if (!workspace.available()) {
+    @if (workspace.backedSample) {
+      <p role="status" i18n="@@vaultBackupUnavailable">The Vault backup service is unavailable right now.</p>
+    } @else {
+      <p role="status" i18n="@@persistenceExampleUnavailable">Set up the development profile to use this example.</p>
+    }
+  } @else if (workspace.backedSample && !workspace.target()) {
+    @if (workspace.workspaces(); as workspaces) {
+      @if (workspaces.items.length) {
+        <section class="grid gap-3" aria-labelledby="existing-vaults">
+          <h2 appUI id="existing-vaults" i18n="@@vaultExistingWorkspaces">Your vaults</h2>
+
+          <ul class="grid gap-2">
+            @for (item of workspaces.items; track item.scopeId) {
+              <li>
+                <button
+                  appUI
+                  type="button"
+                  variant="secondary"
+                  class="max-w-full flex-wrap"
+                  [disabled]="workspace.busy()"
+                  (click)="workspace.openWorkspace(item)"
+                >
+                  <span i18n="@@vaultOpenWorkspace">Open vault</span>
+
+                  <time [attr.datetime]="item.createdAt">{{ item.createdAt | date: 'medium' }}</time>
+
+                  <span class="break-all" i18n="@@exampleWorkspaceReference">ID {{ item.scopeId }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+
+          @if (workspaces.next; as next) {
+            <button
+              appUI
+              type="button"
+              variant="secondary"
+              class="justify-self-start"
+              [disabled]="workspace.busy()"
+              (click)="workspace.discoverWorkspaces(next)"
+              i18n="@@exampleMoreWorkspaces"
+            >
+              Show more workspaces
+            </button>
+          }
+        </section>
+      }
+
+      @if (workspace.objectBackups() && (workspaces.pendingSetup || !workspaces.items.length)) {
+        <button appUI type="button" [disabled]="workspace.busy()" (click)="workspace.createWorkspace()">
+          @if (workspaces.pendingSetup) {
+            <span i18n="@@vaultResumeSetup">Continue vault setup</span>
+          } @else {
+            <span i18n="@@vaultDemoSetup">Set up my vault</span>
+          }
+        </button>
+      } @else if (!workspaces.items.length) {
+        <p role="status" i18n="@@vaultBackupStorageDisabled">
+          Vault backups are unavailable right now. Try again later.
+        </p>
+      }
+    } @else if (workspace.notice()) {
+      <button
+        appUI
+        type="button"
+        variant="secondary"
+        [disabled]="workspace.busy()"
+        (click)="workspace.discoverWorkspaces()"
+        i18n="@@exampleRetryWorkspaces"
+      >
+        Retry loading workspaces
+      </button>
+    } @else {
+      <p role="status" i18n="@@exampleLoadingWorkspaces">Loading workspaces…</p>
+    }
+  } @else if (!workspace.target()) {
+    <button
+      appUI
+      type="button"
+      [disabled]="workspace.busy()"
+      (click)="workspace.createWorkspace()"
+      i18n="@@persistenceCreateWorkspace"
+    >
+      Create a test workspace
+    </button>
+  } @else if (configuredVaultLocked) {
+    <p role="status" i18n="@@vaultLoading">Loading the vault…</p>
+  } @else {
+    @if (!workspace.backedSample) {
+      <section class="space-y-4 rounded-xl border p-5">
+        <h2 appUI i18n="@@persistenceCloudHeading">Operational note · service-readable</h2>
+
+        <form class="space-y-4" (submit)="$event.preventDefault(); workspace.saveCloud()">
+          <app-field
+            control-id="operations-note"
+            label="Operational content"
+            i18n-label="@@persistenceCloudLabel"
+            description="Authorized services can read and process the contents of this note."
+            i18n-description="@@persistenceCloudDescription"
+            #cloudField="appField"
+          >
+            <textarea
+              appUI
+              id="operations-note"
+              name="operations-note"
+              rows="3"
+              maxlength="8192"
+              #cloudText
+              [attr.aria-describedby]="cloudField.describedBy()"
+              [value]="workspace.cloudDraft()"
+              [disabled]="workspace.busy()"
+              (input)="workspace.editOperationalNote(cloudText.value)"
+            ></textarea>
+          </app-field>
+
+          <button appUI type="submit" [disabled]="workspace.busy()" i18n="@@persistenceSaveCloud">
+            Save operational note
+          </button>
+        </form>
+      </section>
+    }
+
+    <section class="space-y-4 rounded-xl border p-5">
+      @if (workspace.backedSample && !workspace.vaultReady()) {
+        <h2 appUI i18n="@@vaultBackedSampleNote">Vault note</h2>
+      } @else if (!workspace.backedSample) {
+        <h2 appUI i18n="@@vaultHeading">Private resource</h2>
+      }
+
+      @if (!workspace.backedSample && workspace.canPair()) {
+        <a appUI routerLink="/security" [queryParams]="workspace.pairingParams()" i18n="@@vaultDevicesTitle">
+          Vault devices
+        </a>
+      }
+
+      @if (!workspace.backedSample) {
+        <p role="status">{{ workspace.status() }}</p>
+      }
+
+      @if (!workspace.backedSample) {
+        <p appUI tone="muted" i18n="@@persistencePrivateLimits">
+          Private content is encrypted before synchronization. This synthetic profile has no recovery: losing all usable
+          keys can permanently lose access. Password reset does not recover private content.
+        </p>
+      } @else if (!workspace.vaultReady() && workspace.canInitialize()) {
+        <p appUI tone="muted" i18n="@@vaultSetupGuidance">
+          Keep access to a linked device. If you lose access to every device, resetting your password won’t recover your
+          note.
+        </p>
+      }
+
+      @if (workspace.backedSample && workspace.canPair() && !workspace.hasBinding()) {
+        <p appUI tone="muted" i18n="@@vaultBackedSampleNeedsPairing">
+          To restore the note on this browser, link it to your vault. Approve the request on a device where you can
+          already open the note.
+        </p>
+      }
+
+      @if (workspace.backedSample && workspace.canInitialize() && workspace.showPrf() && !workspace.vaultReady()) {
+        <p appUI tone="muted" i18n="@@vaultSetupConfirm">
+          Use a passkey you’ve already registered for this account to set up the vault on this device.
+        </p>
+      }
+
+      @if (workspace.showPrf() && !workspace.vaultReady() && (!workspace.backedSample || workspace.canInitialize())) {
+        <div class="flex flex-wrap gap-3">
+          @if (!workspace.backedSample) {
+            <button
+              appUI
+              type="button"
+              [disabled]="workspace.busy() || workspace.vaultReady()"
+              (click)="workspace.unlock()"
+              i18n="@@vaultUnlock"
+            >
+              Unlock with a passkey
+            </button>
+          }
+
+          @if (workspace.canInitialize()) {
+            <button
+              appUI
+              type="button"
+              [variant]="workspace.backedSample ? 'primary' : 'secondary'"
+              [disabled]="workspace.busy() || workspace.vaultReady()"
+              (click)="workspace.unlock(true)"
+            >
+              @if (workspace.backedSample) {
+                <span i18n="@@vaultPrfSetup">Set up with a passkey</span>
+              } @else {
+                <span i18n="@@persistenceInitializePrivate">Set up an empty private resource</span>
+              }
+            </button>
+          }
+        </div>
+      }
+
+      @if (
+        workspace.backedSample &&
+        workspace.canInitialize() &&
+        workspace.showPin() &&
+        !workspace.vaultReady() &&
+        !workspace.pinSetupSelected() &&
+        !workspace.resumingPinSetup()
+      ) {
+        <p appUI tone="muted" i18n="@@vaultSetupPrfUnavailable">Passkey unlock is unavailable here.</p>
+
+        <button appUI type="button" [disabled]="workspace.busy()" (click)="workspace.selectPinSetup()">
+          <span i18n="@@vaultDemoUsePin">Use a PIN on this device</span>
+        </button>
+      }
+
+      @if (
+        workspace.showPin() &&
+        !workspace.vaultReady() &&
+        (!workspace.backedSample ||
+          (workspace.canInitialize() && (workspace.pinSetupSelected() || workspace.resumingPinSetup())))
+      ) {
+        <div class="space-y-4">
+          <p appUI tone="muted" i18n="@@vaultPinWarning">
+            If passkeys aren’t supported, you can use a 6-digit PIN. Anyone with a copy of your encrypted data can try
+            every PIN offline, so a PIN offers less protection. Setup requires a connection. After setup, you can unlock
+            offline if you’re already signed in.
+          </p>
+
+          @if (workspace.backedSample) {
+            <form class="space-y-4" (submit)="$event.preventDefault(); workspace.unlockWithPin(true)">
+              <ng-container [ngTemplateOutlet]="localPin" />
+
+              @if (!workspace.resumingPinSetup()) {
+                <ng-container [ngTemplateOutlet]="confirmPin" />
+              }
+
+              <button appUI type="submit" [disabled]="workspace.busy()" i18n="@@vaultPinSetup">Set up with PIN</button>
+            </form>
+          } @else {
+            <ng-container [ngTemplateOutlet]="localPin" />
+          }
+        </div>
+
+        @if (!workspace.backedSample && workspace.canInitialize()) {
+          <ng-container [ngTemplateOutlet]="confirmPin" />
+
+          <button
+            appUI
+            type="button"
+            variant="secondary"
+            [disabled]="workspace.busy()"
+            (click)="workspace.unlockWithPin(true)"
+            i18n="@@vaultPinInitialize"
+          >
+            Set up an empty private resource with PIN
+          </button>
+        }
+      }
+
+      @if (workspace.vaultReady()) {
+        @if (workspace.backedSample) {
+          <app-field
+            control-id="private-note"
+            label="Your note"
+            i18n-label="@@vaultYourNote"
+            description="Changes are saved automatically. The vault locks after five minutes of inactivity."
+            i18n-description="@@vaultAutoHelp"
+            #editor="appField"
+          >
+            <textarea
+              appUI
+              id="private-note"
+              name="private-note"
+              rows="5"
+              maxlength="8192"
+              autocomplete="off"
+              spellcheck="false"
+              #note
+              [attr.aria-describedby]="editor.describedBy()"
+              [value]="workspace.editor.displayed()"
+              [readOnly]="workspace.editorReadOnly()"
+              (input)="workspace.editPrivateText(note.value)"
+              (blur)="workspace.saveDraft()"
+            ></textarea>
+          </app-field>
+
+          @if (workspace.editor.saveFailed()) {
+            <p role="status" i18n="@@vaultLocalSaveFailed">
+              Your changes haven’t been saved on this device yet. Keep this page open and try again.
+            </p>
+
+            <button
+              appUI
+              variant="secondary"
+              type="button"
+              [disabled]="workspace.busy()"
+              (click)="workspace.saveDraft()"
+              i18n="@@vaultLocalRetry"
+            >
+              Try saving again
+            </button>
+          } @else if (workspace.editor.value() !== null) {
+            <p role="status" i18n="@@vaultDraftPending">Saving on this device…</p>
+          } @else if (workspace.privateResource.pending()) {
+            <p role="status" i18n="@@vaultBackupPending">Saved on this device. Waiting for backup.</p>
+          }
+        } @else {
+          <form class="space-y-4" (submit)="$event.preventDefault(); workspace.savePrivate()">
+            <app-field
+              control-id="private-note"
+              label="Private text"
+              i18n-label="@@vaultPrivateText"
+              description="Only ciphertext is stored locally and synchronized. An encrypted pending change stays on this device until synchronization succeeds."
+              i18n-description="@@persistencePrivateDescription"
+              #privateField="appField"
+            >
+              <textarea
+                appUI
+                id="private-note"
+                name="private-note"
+                rows="4"
+                maxlength="8192"
+                autocomplete="off"
+                spellcheck="false"
+                #privateText
+                [attr.aria-describedby]="privateField.describedBy()"
+                [value]="workspace.privateDraft()"
+                [disabled]="workspace.busy() || workspace.privateResource.pending()"
+                (input)="workspace.editPrivateText(privateText.value)"
+              ></textarea>
+            </app-field>
+
+            <div class="flex flex-wrap gap-3">
+              <button
+                appUI
+                type="submit"
+                [disabled]="workspace.busy() || workspace.privateResource.pending()"
+                i18n="@@vaultSave"
+              >
+                Save encrypted change
+              </button>
+
+              <button
+                appUI
+                type="button"
+                variant="secondary"
+                [disabled]="workspace.busy()"
+                (click)="workspace.synchronize()"
+              >
+                <span i18n="@@persistenceSynchronize">Synchronize encrypted changes</span>
+              </button>
+            </div>
+          </form>
+
+          @if (workspace.privateResource.pending()) {
+            <p role="status" i18n="@@persistencePending">
+              An encrypted change is waiting to sync. Keep the data on this device until it syncs.
+            </p>
+          }
+
+          @if (workspace.vault.plaintext()) {
+            <pre class="rounded-lg border p-4 break-words whitespace-pre-wrap">{{ workspace.vault.plaintext() }}</pre>
+          }
+        }
+
+        @if (workspace.privateResource.pending() && workspace.privateResource.conflict()) {
+          <p i18n="@@persistenceConflictChoice">
+            Choose which version to keep. Keeping your pending version replaces the synchronized content after checking
+            for new changes. Discarding removes your pending copy from this device.
+          </p>
+
+          <div class="flex flex-wrap gap-3">
+            <button
+              appUI
+              type="button"
+              [disabled]="workspace.busy()"
+              (click)="workspace.resolveConflict(true)"
+              i18n="@@persistenceKeepPending"
+            >
+              Keep my pending version and synchronize
+            </button>
+
+            <button
+              appUI
+              type="button"
+              variant="secondary"
+              [disabled]="workspace.busy()"
+              (click)="workspace.resolveConflict(false)"
+              i18n="@@persistenceDiscardPending"
+            >
+              Discard my pending change and use the synchronized version
+            </button>
+          </div>
+        }
+      }
+
+      @if (workspace.backedSample && workspace.canPair()) {
+        <div>
+          <ng-container [ngTemplateOutlet]="linkDevice" />
+        </div>
+      }
+    </section>
+  }
+
+  @if (workspace.notice()) {
+    <p role="status" aria-live="polite">{{ workspace.notice() }}</p>
+  }
+</section>
+
+<ng-template #localPin>
+  <app-field
+    control-id="vault-pin"
+    label="Local unlock PIN"
+    i18n-label="@@vaultPinLabel"
+    description="6 digits"
+    i18n-description="@@vaultPinLength"
+  >
+    <app-pin-input
+      #localPinControl
+      required
+      [digits]="6"
+      [disabled]="workspace.busy()"
+      [value]="workspace.pinDraft()"
+      (valueChange)="workspace.pinDraft.set($event)"
+      (completed)="autoUnlockPin() && !workspace.busy() && workspace.unlockWithPin()"
+    />
+  </app-field>
+</ng-template>
+
+<ng-template #confirmPin>
+  <app-field control-id="vault-pin-confirm" label="Confirm your new PIN" i18n-label="@@vaultPinConfirm">
+    <app-pin-input
+      required
+      [digits]="6"
+      [disabled]="workspace.busy()"
+      [value]="workspace.pinConfirmation()"
+      (valueChange)="workspace.pinConfirmation.set($event)"
+    />
+  </app-field>
+</ng-template>
+
+<ng-template #linkDevice>
+  <a appUI routerLink="/security" [queryParams]="workspace.pairingParams()" i18n="@@vaultLinkDevice">Link a device</a>
+</ng-template>

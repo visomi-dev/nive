@@ -1,0 +1,150 @@
+<section class="flex max-w-2xl min-w-0 flex-col gap-6">
+  <header class="space-y-3">
+    <h1 appUI appNavigationHeading i18n="@@authPasskeys">Passkeys</h1>
+
+    <p appUI tone="muted" i18n="@@authPasskeysManageDescription">
+      Add a passkey or rename one so you can recognize it. Removing a passkey ends sessions that used it.
+    </p>
+  </header>
+
+  <button
+    appUI
+    [disabled]="action.busy()"
+    (click)="add()"
+    i18n="@@authAddPasskey"
+    class="w-full sm:w-fit"
+    [attr.aria-busy]="action.pending() === 'add'"
+  >
+    Add a passkey
+  </button>
+
+  <app-auth-feedback [action]="action" />
+
+  @if (!keys().length && !action.busy() && !action.error()) {
+    <p appUI tone="muted" i18n="@@authNoPasskeys">
+      You don’t have any passkeys. Add one to sign in with your device’s screen lock.
+    </p>
+  }
+
+  @for (key of keys(); track key.id) {
+    <section appUI="card">
+      <h2 class="font-semibold break-words">{{ displayName(key) }}</h2>
+
+      <dl class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-2 text-sm">
+        @if (key.providerName) {
+          <dt i18n="@@authPasskeyCreatedWith">Created with</dt>
+
+          <dd class="min-w-0 break-words">{{ key.providerName }}</dd>
+        }
+
+        <dt i18n="@@authPasskeyType">Type</dt>
+
+        <dd class="min-w-0 break-words">{{ kind(key) }}</dd>
+
+        <dt i18n="@@authPasskeyCreated">Created</dt>
+
+        <dd class="min-w-0 break-words">
+          <time [attr.datetime]="key.createdAt">
+            {{ key.createdAt | date: 'mediumDate' }} {{ key.createdAt | date: 'shortTime' }}
+          </time>
+        </dd>
+
+        <dt i18n="@@authPasskeyLastUsed">Last used</dt>
+
+        <dd class="min-w-0 break-words">
+          @if (key.lastUsedAt) {
+            <time [attr.datetime]="key.lastUsedAt">
+              {{ key.lastUsedAt | date: 'mediumDate' }} {{ key.lastUsedAt | date: 'shortTime' }}
+            </time>
+          } @else {
+            <span i18n="@@authPasskeyNotUsed">Not used yet</span>
+          }
+        </dd>
+      </dl>
+
+      @if (editing() === key.id) {
+        <form
+          novalidate
+          [attr.data-submitted]="attempted() ? '' : null"
+          class="space-y-3"
+          (submit)="rename($event, key.id)"
+        >
+          <app-field
+            #field="appField"
+            control-id="passkey-label"
+            [label]="nameLabel"
+            [error]="fields.label().errors()[0]?.message ?? ''"
+          >
+            <input
+              appUI
+              id="passkey-label"
+              [formField]="fields.label"
+              [attr.aria-invalid]="fields.label().touched() && fields.label().invalid()"
+              [attr.aria-describedby]="field.describedBy()"
+            />
+          </app-field>
+
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <button
+              appUI
+              type="submit"
+              [disabled]="action.busy()"
+              i18n="@@authSave"
+              [attr.aria-busy]="action.pending() === 'rename:' + key.id"
+            >
+              Save
+            </button>
+
+            <button appUI type="button" variant="secondary" (click)="cancelRename()" i18n="@@authCancel">Cancel</button>
+          </div>
+        </form>
+      } @else {
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <button appUI variant="secondary" [disabled]="action.busy()" (click)="edit(key)" i18n="@@authRename">
+            Rename
+          </button>
+
+          <button
+            appUI
+            #removeKey
+            [variant]="removing() === key.id ? 'secondary' : 'danger'"
+            [attr.aria-expanded]="removing() === key.id"
+            [attr.aria-controls]="'passkey-confirmation-' + key.id"
+            [disabled]="action.busy()"
+            (click)="toggleRemovalConfirmation(key.id)"
+            i18n="@@authRemove"
+          >
+            Remove
+          </button>
+        </div>
+
+        @if (removing() === key.id) {
+          <div class="space-y-4" [id]="'passkey-confirmation-' + key.id">
+            <p role="status" i18n="@@authRemovePasskeyConfirm">
+              Remove this passkey? This ends sessions that used it. Keep another way to sign in.
+            </p>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                appUI
+                variant="danger"
+                [disabled]="action.busy()"
+                (click)="remove(key.id)"
+                i18n="@@authConfirmRemove"
+                [attr.aria-busy]="action.pending() === 'remove:' + key.id"
+              >
+                Confirm removal
+              </button>
+
+              <button appUI variant="secondary" (click)="cancelRemoval(removeKey)" i18n="@@authCancel">Cancel</button>
+            </div>
+          </div>
+        }
+      }
+    </section>
+  }
+
+  <a appUI routerLink="/security" i18n="@@authBackSecurity" class="inline-flex min-h-11 items-center">
+    Back to security
+  </a>
+</section>

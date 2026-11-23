@@ -1,0 +1,14 @@
+---
+import type { ComponentProps } from 'astro/types';
+
+import Select from './select.astro';
+import ThemeBehavior from './theme-behavior.astro';
+
+type Props = ComponentProps<typeof Select>;
+---
+
+<Select {...Astro.props} data-theme-select>
+  <slot />
+</Select>
+
+<ThemeBehavior />

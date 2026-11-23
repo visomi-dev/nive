@@ -1,0 +1,53 @@
+<section class="flex min-w-0 flex-col gap-6">
+  <header class="space-y-3">
+    <h1 appUI appNavigationHeading i18n="@@authVerifyEmailTitle">Verify your email</h1>
+
+    <p appUI tone="muted" i18n="@@authVerifyEmailDescription">
+      We created your account. Verify your email to finish signing in.
+    </p>
+  </header>
+
+  @if (session.snapshot().nextStep === 'add_email') {
+    <app-email-entry [busy]="action.busy()" (confirmed)="request($event)" [loading]="action.pending() === 'request'" />
+  } @else {
+    <p class="text-sm font-medium break-all">{{ session.user()?.email }}</p>
+
+    @if (pending()) {
+      <app-code-entry
+        auto-submit
+        [busy]="action.busy()"
+        (confirmed)="verify($event)"
+        [loading]="action.pending() === 'verify'"
+      />
+
+      <app-resend-code />
+    } @else {
+      <p appUI tone="muted" i18n="@@authEmailRestart">Request a new code to verify your email.</p>
+
+      <button
+        appUI
+        class="w-full"
+        [disabled]="action.busy()"
+        (click)="request()"
+        i18n="@@authRequestCode"
+        [attr.aria-busy]="action.pending() === 'request'"
+      >
+        Request a code
+      </button>
+    }
+  }
+
+  <app-auth-feedback [action]="action" />
+
+  <button
+    appUI
+    variant="secondary"
+    class="w-full"
+    [disabled]="action.busy()"
+    (click)="logout()"
+    i18n="@@authSignOut"
+    [attr.aria-busy]="action.pending() === 'logout'"
+  >
+    Sign out
+  </button>
+</section>

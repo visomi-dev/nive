@@ -1,0 +1,50 @@
+---
+import '../styles/global.css';
+import SiteTelemetry from '../components/site/telemetry.astro';
+import favicon from '../../../../../assets/brand/favicon.svg?url';
+import darkFavicon from '../../../../../assets/brand/favicon-dark.svg?url';
+
+type Props = {
+  locale: 'en' | 'es';
+  title: string;
+  description?: string;
+  telemetry?: boolean;
+};
+
+const { locale, title, description, telemetry = true } = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    {description && <meta name="description" content={description} />}
+
+    <title>{title} · Nive</title>
+
+    <meta property="og:site_name" content="Nive" />
+
+    <meta property="og:type" content="website" />
+
+    <meta property="og:title" content={`${title} · Nive`} />
+
+    {description && <meta property="og:description" content={description} />}
+
+    <meta property="og:locale" content={locale === 'en' ? 'en_US' : 'es_MX'} />
+
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+
+    <link rel="icon" type="image/svg+xml" href={darkFavicon} media="(prefers-color-scheme: dark)" />
+
+    <slot name="head" />
+
+    {telemetry && <SiteTelemetry />}
+  </head>
+
+  <body class="min-h-screen bg-canvas text-ink">
+    <slot />
+  </body>
+</html>

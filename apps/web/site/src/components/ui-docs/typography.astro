@@ -1,0 +1,107 @@
+---
+import { uiDocs, type UiLocale } from '../../ui-docs';
+import Heading from '../heading.astro';
+import Text from '../text.astro';
+import Code from '../code.astro';
+import Link from '../link.astro';
+import Divider from '../divider.astro';
+import Preview from './preview.astro';
+type Props = { locale: UiLocale };
+const { locale } = Astro.props;
+const labels = uiDocs[locale];
+---
+
+<Preview
+  id="heading"
+  locale={locale}
+  angular={'<h2 appUI uiSize="lg">A clear hierarchy</h2>'}
+  astro={'<Heading as="h2" ui-size="lg">A clear hierarchy</Heading>'}
+>
+  <div class="grid gap-4">
+    <Heading as="h4" ui-size="xl">
+      {labels.subheading}
+    </Heading>
+
+    <Heading as="h4" ui-size="lg">
+      {labels.subheading}
+    </Heading>
+
+    <Heading as="h4" ui-size="md">
+      {labels.subheading}
+    </Heading>
+
+    <Heading as="h4" ui-size="sm">
+      {labels.subheading}
+    </Heading>
+  </div>
+</Preview>
+
+<Preview
+  id="text"
+  locale={locale}
+  angular={'<p appUI uiSize="md">Good defaults.</p>\n<p appUI tone="muted" uiSize="sm">Supporting text.</p>'}
+  astro={'<Text ui-size="md">Good defaults.</Text>\n<Text tone="muted" ui-size="sm">Supporting text.</Text>'}
+>
+  <div class="grid gap-3">
+    <Text ui-size="lg">{labels.body}</Text>
+
+    <Text>{labels.body}</Text>
+
+    <Text tone="muted" ui-size="sm">
+      {labels.muted}
+    </Text>
+
+    <Text tone="accent" ui-size="xs" mono weight="medium">
+      {labels.body}
+    </Text>
+  </div>
+</Preview>
+
+<Preview
+  id="code"
+  locale={locale}
+  angular={'<code appUI>button.classes()</code>\n<pre><code appUI block>const ready = true;</code></pre>'}
+  astro={'<Code>button.classes()</Code>\n<pre><Code block>const ready = true;</Code></pre>'}
+>
+  <Code>button.classes()</Code>
+
+  <pre class="mt-4"><Code block>{"const ready = true;\nbutton.classes({ variant: 'primary', size: 'md' });"}</Code></pre>
+</Preview>
+
+<Preview
+  id="link"
+  locale={locale}
+  angular={
+    '<a appUI href="#forms">Learn more</a>\n<a appUI variant="muted" underline="hover" href="#forms">Learn more</a>\n<a appUI variant="inverse" href="#forms">Learn more</a>'
+  }
+  astro={
+    '<Link href="#forms">Learn more</Link>\n<Link variant="muted" underline="hover" href="#forms">Learn more</Link>\n<Link variant="inverse" href="#forms">Learn more</Link>'
+  }
+>
+  <div class="flex flex-wrap items-center gap-6">
+    <Link href="#forms">{labels.learn}</Link>
+
+    <Link href="#forms" variant="muted" underline="hover">
+      {labels.learn}
+    </Link>
+
+    <div class="rounded-lg bg-blue-700 px-4 py-3">
+      <Link href="#forms" variant="inverse">
+        {labels.learn}
+      </Link>
+    </div>
+  </div>
+</Preview>
+
+<Preview
+  id="divider"
+  locale={locale}
+  angular={'<hr appUI />\n<hr appUI soft />'}
+  astro={'<Divider />\n<Divider soft />'}
+>
+  <div class="grid gap-6 py-3">
+    <Divider />
+
+    <Divider soft />
+  </div>
+</Preview>

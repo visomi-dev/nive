@@ -1,0 +1,46 @@
+<div class="flex min-h-dvh flex-col bg-canvas text-ink">
+  <header class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
+    <a href="/" class="inline-flex min-h-11 shrink-0 items-center rounded-lg ui-focus-ring">
+      <picture>
+        <source media="(min-width: 640px)" srcset="brand/logotype-nive.svg" />
+
+        <img
+          src="brand/isotype.svg"
+          alt="Nive"
+          width="175"
+          height="36"
+          class="h-9 w-9 object-contain sm:w-[175px] dark:invert"
+        />
+      </picture>
+    </a>
+
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+      <app-browser-privacy />
+
+      <app-language-switcher />
+
+      <button app-theme-switcher aria-label="Dark theme" i18n-aria-label="@@themeToggle"></button>
+    </div>
+  </header>
+
+  <main id="auth-main" class="mx-auto grid w-full max-w-7xl flex-1 justify-items-center px-5 py-8 sm:py-14 lg:px-8">
+    <section appUI="card" layout="plain" padding="lg" class="w-full max-w-md self-center rounded-panel shadow-sm">
+      <ng-content />
+      <router-outlet class="hidden" />
+
+      @if (navigation.notificationFailed()) {
+        <div appUI="alert" role="status" class="mt-5" i18n="@@authNotificationFailed">
+          The change was saved, but the notification could not be sent.
+        </div>
+      }
+    </section>
+  </main>
+
+  <app-consent-notice class="mx-auto block w-full max-w-md px-5" />
+
+  <footer
+    class="flex flex-wrap items-center justify-center gap-x-3 px-5 pb-3 text-center text-xs text-zinc-500 dark:text-zinc-400"
+  >
+    <app-privacy-link />
+  </footer>
+</div>

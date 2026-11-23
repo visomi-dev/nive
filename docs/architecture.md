@@ -1,0 +1,277 @@
+# Architecture
+
+Visomi Stack is a reusable application foundation. The reboot proceeds through
+small, agreed changes; this document records the current state separately from
+the intended architecture. It is not an implementation plan or a feature inventory
+for the previous stack.
+
+## What exists today
+
+```text
+apps/
+  web/
+    api/          # web-api: application factory and standalone startup
+    gateway/      # web-gateway: ESM host for compiled API, Angular and Astro
+    app/          # web-app: import-safe Angular SSR factory and independent executable
+libs/
+  backend/
+    shared/       # backend-shared: HTTP-independent database and email capabilities
+  web/backend/
+    shared/       # web-backend-shared: shared infrastructure and observability
+```
+
+`apps/web/api/src/app.ts` exports `createApp()`. Calling it configures and returns
+an Express application without opening a listener or initializing telemetry.
+`main.ts` owns standalone telemetry initialization, listening, SIGINT/SIGTERM
+handling, HTTP draining, and bounded telemetry shutdown. The public `GET /` endpoint returns a static JSON greeting. The authentication
+capability provides passkey and password signup/sign-in, email verification,
+Google account unification, TOTP and backup codes, restricted recovery/device
+enrollment, and method/session management under `/auth`, backed by PostgreSQL. Unknown routes and
+application errors return fixed responses. See the [API guide](../apps/web/api/README.md)
+for the schema, migration commands and managed/inherited ownership contract.
+
+`backend-shared` exposes the pinned `injection-js` DI surface and database/SMTP
+resource tokens. Auth composes a graph per runtime, with property-injected services
+and explicit value providers. Observability uses the same DI surface only when its
+owner initializes it. Backend projects disable decorators and metadata emission;
+DI does not load a metadata polyfill. The HTTP factories retain explicit arguments,
+and executable resource ownership and the existing observability registry are
+preserved. No request-wide ambient injector is introduced.
+
+Auth is organized by capability under `auth/password`, `email`, `passkeys`,
+`google`, `totp`, `recovery`, `devices`, `sessions` and `methods`. Each owns its
+`router.ts`, an injectable `controller.ts` class, `service.ts`, `contract.ts` and
+capability tests.
+Password hashing, email normalization, TOTP secrets and session storage stay with
+their owning capability. Configuration, identity/authorization invariants, shared
+proofs, HTTP helpers, request limits and notification orchestration live in
+`auth/shared`. Runtime/router composition stays at the auth root. The scoped
+injector shares dependencies across capabilities and keeps separate runtimes
+isolated. `SessionResponses` handles HTTP authentication responses without a
+controller depending on the whole auth runtime. Controllers capture dependencies
+at construction and keep each request's state in method arguments/local variables.
+Cross-capability behavior is verified through the API integration suite. Reusable
+`anonymous`, `authenticated` and `authorized` middleware can guard a route or a
+router. Permission arrays are evaluated individually against an injected policy
+with the current principal/request context; predicates can check additional
+requirements. The boundary is ready for ABAC without introducing policy storage
+or adding static permission claims to sessions. Domain mutation checks remain
+transactional.
+
+`web-backend-shared` provides the route-contract adapter and OpenAPI generator.
+Each contract's Zod request object supplies native `z.input`/`z.output` types,
+runtime validation and documentation. The controller receives parsed output
+without casts. Operation method/path metadata is shared with route registration;
+response schemas describe the existing wire format. The API assembles its document
+without resources at `/openapi.json`; its compiled gateway mount exposes
+`/api/openapi.json` with an explicit `/api` server base. Raw validation errors are
+translated to controlled public codes and never captured by telemetry.
+
+`libs/backend/db/drizzle.config.ts` configures Drizzle at the library root.
+`libs/backend/db/src/lib/` owns domain schemas and one migration history for all backend
+modules. The API imports its
+authentication schema through `@visomi-stack/backend-db`. Database initialization remains
+explicit: each executable creates and closes its own pool and supplies it to the
+modules it composes. Imports do not open connections or run migrations; separate
+processes share PostgreSQL state, not JavaScript resources.
+
+`libs/backend/shared/src/lib/mail/` owns SMTP delivery, typed authentication mail
+content, MJML templates, escaped HTML/plain-text rendering and generated resources.
+Its `emails-build` target runs before the API build. Auth decides when to send
+messages and translates mail failures to HTTP; the executables create and close
+the injected transport.
+
+The API's Rolldown build preserves named `app` and `main` entries with stable
+`app.js` and `main.js` filenames, CommonJS output, external runtime dependencies,
+and public application exports. Generated `package.json` explicitly declares
+`type: commonjs` and directs package imports to `app.js`. Shared chunks belong
+to the deployment artifact and must be copied with both entries.
+
+The gateway imports the compiled API's `app.js`, never API TypeScript source or
+`main.js`. Its ESM build emits stable `app.js` and `main.js` entries with
+`type: module` metadata. Native ESM imports the API's existing CommonJS public
+exports without changing that API contract. Preserve both complete sibling output
+directories and their declared runtime dependencies.
+
+`createGatewayApp()` composes Express without starting resources. Gateway
+`main.ts` owns the listener, telemetry, optional SMTP transport and database pool; it creates the
+API's auth runtime and installs its middleware before mounting at `/api` with
+`authMode: inherited`. Helmet policy and HTTP error classes/handling live in
+`web-backend-shared/src/lib/http/`. The API also delegates headers and error
+responses through explicit `helmetMode: inherited` and `errorMode: inherited`;
+standalone defaults manage both. The host installs Helmet before authentication
+and routes, then installs the shared error handler last. Domain-specific failure
+translation stays with auth. The same observability instance crosses both bundles,
+with one completion record per request. Shutdown drains HTTP work, closes the
+owned pool, and flushes telemetry. Auth routes fail closed without a configured
+database. The gateway also serves compiled Astro public pages at `/en/` and `/es/`,
+with `/` redirecting to English. `/app` remains reserved until Angular integration. Process integration tests
+exercise the actual compiled gateway and API, including real PostgreSQL and
+cryptographically valid WebAuthn; the API's own import harness remains separate.
+Angular SSR now runs independently. Background workers and realtime delivery remain unimplemented.
+The container runtime starts the standalone API. Compose applies versioned
+migrations through a separate one-shot database initializer before starting it;
+the API does not own schema migration or seed execution.
+
+## Screaming Architecture and Domain-Driven Design
+
+This is the architectural direction for feature development. Top-level feature
+folders should name business domains and capabilities, so the code's organization
+communicates what the system does. Do not organize all features into global
+`controllers/`, `services/`, and `repositories/` folders. Keep each domain's
+behavior, contracts, and domain-specific infrastructure close to its owner.
+
+Make domain boundaries explicit and use their public entry points. Put genuinely
+cross-cutting runtime infrastructure in `libs/web/backend/shared`; observability
+is the current concrete example. The library's `src/lib/observability/lib/` owns
+the facade and privacy policy; `middleware/` contains its Express adapter.
+There is no duplicate API-local telemetry implementation or empty feature hierarchy.
+
+The current repository is evidence for runtime composition and shared infrastructure,
+not for completed business domains. Introduce aggregates, repositories, interfaces,
+or additional layers only when current requirements justify them. Neither the
+legacy stack's domain model nor Nive's product behavior establishes a requirement here.
+
+## Observability ownership and privacy
+
+The shared library exposes `initializeObservability`, `currentObservability`,
+`httpObservability`, and `operationalErrorHandler`. The returned facade provides
+controlled runtime events, request correlation, job context capture/execution,
+and shutdown. Pino writes structured logs; OpenTelemetry supplies explicit spans,
+async context, request/job counters, and duration histograms in seconds.
+The integration owns its context manager and providers without registering global
+providers. Feature code uses the facade, so unaudited instrumentation cannot feed
+its sinks through global SDK access.
+
+`initializeObservability()` constructs an internal `ObservabilityRuntime` class;
+the exported `Observability` type remains the consumer contract. Its public methods
+are bound to preserve detached callback usage.
+
+Initialize once from the process's owning startup path. A process registry reuses
+the same facade across separately bundled copies of the shared library; the first
+owner chooses service metadata and local sinks. Embedded `createApp()` reuses that
+runtime or accepts it explicitly. It never initializes a second SDK. A bare factory
+without an initialized or supplied facade remains uninstrumented. The owner drains
+its application work before shutting down telemetry; consumers do not shut down
+their host's runtime.
+
+HTTP middleware generates a random request ID at the public boundary. The first
+middleware instance owns one span and one completion record across finish/close;
+later instances re-enter its context without duplicating output. All public HTTP
+requests start fresh traces. External request IDs, trace headers, and baggage are
+ignored. Fixed `client_error`, `server_error`, and `aborted` outcomes distinguish
+failures without recording exceptions.
+
+Telemetry uses explicit field and value allowlists:
+
+- Resources contain only approved service name, release version, and environment.
+- Logs contain fixed event/message names, outcomes or controlled codes, optional
+  HTTP status and duration, and generated request/trace/span IDs. Pino host/PID
+  bindings are disabled.
+- HTTP/job span names are fixed `http.request` or `job.execute`. Their attributes contain
+  only operation, outcome, and optional HTTP status. The browser error boundary below
+  defines the separate `frontend.error` allowlist. Raw exceptions, events, links,
+  arbitrary attributes, and data-bearing resource detectors are not exposed by the facade.
+- Metric labels contain operation, outcome, and optional HTTP status. Identifiers
+  are never labels. Each counter or duration histogram has a single implementation.
+
+Bodies, cookies, tokens, IPs, user agents, customer identifiers (including hashes),
+actual URLs/query strings, SQL containing data, Redis keys, job payloads, and raw
+exception messages/stacks are excluded from every signal. There is no broad
+auto-instrumentation, Morgan, pino-http, or automatic resource discovery.
+
+`captureJobContext()` returns only versioned request/trace/span IDs. Store that
+technical carrier separately from domain payloads in a trusted queue boundary;
+`runJob(carrier, work)` rebuilds context from the allowlisted fields and preserves
+the application's result or error. It accepts no baggage or trace-state fields.
+The carrier is correlation metadata, never authentication or authorization. Do not
+populate it from public request bodies. Cross-process tests cover serialization
+and restoration; no queue or worker application has been integrated yet.
+
+Logs default to local JSON output. Trusted startup options allow local test sinks.
+An explicitly opted-in OTLP/HTTP protobuf exporter uses the same private
+provider and capture policy, with bounded batching and transport timeouts. It
+ignores environment-driven resource attributes and never registers instrumentations.
+Optional span export uses an authenticated private OTLP receiver. Platform-managed
+telemetry must independently satisfy the [capture policy](deployment.md#observability-and-future-workers).
+Shutdown is idempotent and bounded (one second by default, at most
+five seconds); failures cannot rewrite application results or expose raw errors.
+
+## Intended direction
+
+Angular SSR, Astro, Express, and separate gateway, worker, and realtime
+responsibilities are the agreed direction for the reboot. The following paths
+and public mounts describe the intended organization. The API and gateway
+directories exist, and the gateway composes the API and Astro site. Angular runs
+independently; its gateway mount, worker and realtime composition remain future work.
+Future Nx project names must be checked when projects are created.
+
+| Boundary    | Intended location   | Responsibility                                                                        |
+| ----------- | ------------------- | ------------------------------------------------------------------------------------- |
+| Public site | `apps/web/site`     | Astro public pages, served at `/`.                                                    |
+| Application | `apps/web/app`      | Angular application with server-side rendering, served at `/app`.                     |
+| API         | `apps/web/api`      | Express HTTP endpoints, mounted at `/api` by the gateway.                             |
+| Gateway     | `apps/web/gateway`  | Public HTTP entry point composing the site, application, API, and realtime transport. |
+| Worker      | `apps/worker`       | Background processing, with feature handlers owned by their domains.                  |
+| Realtime    | `apps/web/realtime` | Connection authorization, subscriptions, and delivery of authorized events.           |
+
+The gateway provides a common public origin while keeping feature logic in its
+own boundary. The standalone API serves `/`; the gateway mounts it at `/api`. Realtime protocol and path, worker startup, process management,
+and scaling remain implementation decisions for later steps.
+
+As shared code is introduced, keep browser utilities free of backend dependencies
+and browser-only operations out of SSR execution. Platform-neutral contracts
+should be usable without starting a server, opening a database, or importing a
+frontend framework. Shared libraries should have clear owners and public entry
+points; their names and layout can be decided when needed.
+
+## Decisions still open
+
+The topology does not select:
+
+- Authentication beyond the implemented passkey/session slice, recovery, and domain authorization policy.
+- Tenant boundaries, domain database isolation, and storage beyond the implemented PostgreSQL/Drizzle authentication slice.
+- Queue and realtime libraries, delivery guarantees, or event contracts.
+- UI components and PWA behavior beyond the shared Tailwind foundations and English/Spanish localization.
+- Encryption, browser vaults, local-agent integration, or synchronization protocols.
+- Hosting, ingress, deployment composition, external telemetry exporters/providers, or release controls.
+
+PostgreSQL now backs authentication through explicit Drizzle migrations. Redis and
+MinIO still only appear in inherited container configuration; their presence does
+not establish working integrations or settle these decisions.
+
+## Reference boundaries
+
+The previous Visomi Stack provides historical requirements and design rationale.
+Its implementation descriptions, accepted ADRs, test results, and production
+claims do not automatically apply to this reboot. Conflicting or superseded
+documents require a fresh decision before adoption.
+
+Nive is an important implementation reference for later work. Reusable platform
+behavior should be assessed individually; its financial, shopping, household,
+and other product-specific behavior is outside the stack unless explicitly agreed.
+Both reference projects remain read-only for this reboot step.
+
+Update these documents as capabilities land. Add a separate decision record only
+when a consequential choice needs lasting rationale; routine work does not require
+a spec collection.
+
+Shared styling, themes and the current frontend runtime boundaries are documented
+in [Web foundations](web-foundations.md).
+
+### Browser error boundary
+
+Angular and Astro own their framework adapters around `web-shared-observability`,
+a portable browser capture policy. The gateway and the separate Angular Node
+executable compose the shared backend intake with their own build asset allowlist,
+process-local signing key and executable-owned observability runtime. Neither
+frontend imports a backend runtime into its browser bundle.
+
+`frontend.error` is an explicitly allowlisted operation. The server accepts only
+bounded error categories and page labels, independently verifies source references
+against immutable build assets, and exports through the private OTLP exporter.
+Signed, expiring references can correlate an observed failed API request with a
+browser error; arbitrary incoming client trace context is never trusted. Source
+maps remain private build artifacts and can be resolved locally using the
+operator tool described in [Deployment and telemetry](deployment.md#browser-error-reporting).
+The complete capture and delivery limits are documented there.

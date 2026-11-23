@@ -1,0 +1,265 @@
+#!/usr/bin/env tsx
+// @nx-target-name: serve
+import { createServer } from 'node:http';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { createDatabase, type BackupObjects, type DatabaseResource } from '@visomi-stack/backend-db';
+import {
+  createMemoryRealtimeTransport,
+  createRealtimePublisher,
+  createRedisRealtimeTransport,
+  createSmtp,
+  smtpConfig,
+  subscribeRealtime,
+  type MailTransport,
+  type RealtimeRuntime,
+} from '@visomi-stack/backend-shared';
+import {
+  browserAssets,
+  createBrowserTelemetry,
+  createVisitAnalytics,
+  initializeObservability,
+  proxyConfiguration,
+} from '@visomi-stack/web-backend-shared';
+import { developmentPersistenceDemos } from '@visomi-stack/shared-db';
+
+import packageJson from '../package.json' with { type: 'json' };
+
+import { loadApi } from './api-module';
+import type { EmbeddedAuthentication } from './api-module';
+import { createGatewayApp } from './app';
+import { loadSite } from './site-module';
+import { loadApplication } from './application-module';
+import { loadRealtime } from './realtime-module';
+
+import { stackVisitPages } from '@visomi-stack/web-shared-observability';
+
+const observability = initializeObservability({
+  service: 'web-gateway',
+  version: packageJson.version,
+  environment: process.env.NODE_ENV,
+});
+let database: DatabaseResource | undefined;
+let backupObjects: BackupObjects | undefined;
+let mail: MailTransport | undefined;
+let auth: EmbeddedAuthentication | undefined;
+let realtime: RealtimeRuntime | undefined;
+let realtimeTransport = createMemoryRealtimeTransport();
+const server = createServer();
+let stopping = false;
+let browserTelemetry: ReturnType<typeof createBrowserTelemetry> | undefined;
+let visits: ReturnType<typeof createVisitAnalytics> | undefined;
+
+async function stop(exitCode: number): Promise<void> {
+  if (stopping) {
+    return;
+  }
+
+  stopping = true;
+  process.off('SIGINT', onSignal);
+  process.off('SIGTERM', onSignal);
+  const deadline = setTimeout(() => {
+    observability.event('runtime.failed', 'shutdown_timeout');
+    process.exit(1);
+  }, 5000);
+  const drain = setTimeout(() => server.closeAllConnections(), 3000);
+
+  let listenerClosed = true;
+
+  realtimeTransport.close();
+
+  try {
+    if (realtime) {
+      await realtime.close();
+    } else {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  } catch {
+    listenerClosed = false;
+  }
+
+  clearTimeout(drain);
+  let databaseClosed = true;
+
+  try {
+    browserTelemetry?.close();
+    visits?.close();
+    mail?.close();
+    backupObjects?.close();
+  } catch {
+    databaseClosed = false;
+  }
+
+  try {
+    await database?.close();
+  } catch {
+    databaseClosed = false;
+  }
+  observability.event(
+    !listenerClosed || !databaseClosed || exitCode ? 'runtime.failed' : 'runtime.stopped',
+    !listenerClosed || !databaseClosed ? 'shutdown_failed' : exitCode ? 'startup_failed' : 'none',
+  );
+  const flushed = await observability.shutdown(1000);
+
+  clearTimeout(deadline);
+  process.exitCode = flushed && listenerClosed && databaseClosed ? exitCode : 1;
+}
+
+function onSignal(): void {
+  void stop(0);
+}
+
+process.once('SIGINT', onSignal);
+process.once('SIGTERM', onSignal);
+server.once('error', () => void stop(1));
+
+const host = process.env.HOST ?? 'localhost';
+const port = process.env.PORT === undefined ? 3000 : Number(process.env.PORT);
+
+async function bootstrap() {
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error('gateway_configuration_invalid');
+  }
+
+  const publicUrl = new URL(process.env['AUTH_ORIGIN'] || 'http://localhost:3000');
+  const origin = publicUrl.origin;
+
+  if (!['http:', 'https:'].includes(publicUrl.protocol) || publicUrl.href !== origin + '/') {
+    throw new Error('gateway_configuration_invalid');
+  }
+
+  const entry = process.env.API_APP_PATH
+    ? pathToFileURL(resolve(process.env.API_APP_PATH))
+    : new URL('../api/app.js', import.meta.url);
+  const siteEntry = process.env.SITE_APP_PATH
+    ? pathToFileURL(resolve(process.env.SITE_APP_PATH))
+    : new URL('../site/server/entry.mjs', import.meta.url);
+  const applicationEntry = process.env.APPLICATION_APP_PATH
+    ? pathToFileURL(resolve(process.env.APPLICATION_APP_PATH))
+    : new URL('../app/server/server.mjs', import.meta.url);
+  const [api, site, angular] = await Promise.all([
+    loadApi(entry),
+    loadSite(siteEntry),
+    loadApplication(applicationEntry),
+  ]);
+
+  if (stopping) {
+    return;
+  }
+
+  if (process.env.DATABASE_URL) {
+    if (process.env.REALTIME_REDIS_URL) {
+      realtimeTransport = createRedisRealtimeTransport(process.env.REALTIME_REDIS_URL, () =>
+        observability.event('runtime.failed'),
+      );
+    }
+
+    const config = api.authConfig({
+      origin: process.env.AUTH_ORIGIN!,
+      rpId: process.env.AUTH_RP_ID!,
+      secret: process.env.SESSION_SECRET!,
+      googleClientId: process.env.GOOGLE_AUTH_CLIENT_ID || undefined,
+      totpKey: process.env.AUTH_TOTP_ENCRYPTION_KEY || undefined,
+    });
+
+    const smtp = smtpConfig(process.env);
+
+    mail = smtp ? createSmtp(smtp) : undefined;
+    database = createDatabase(process.env.DATABASE_URL, () => observability.event('runtime.failed'));
+    auth = api.createAuthentication({
+      database: database.db,
+      pool: database.pool,
+      config,
+      mail,
+      realtimePublisher: createRealtimePublisher(realtimeTransport),
+    });
+
+    await database.pool.query('SELECT 1');
+  }
+
+  if (stopping) {
+    return;
+  }
+
+  const [applicationAssets, siteAssets] = await Promise.all([
+    browserAssets(angular.clientDirectory, '/app'),
+    site ? browserAssets(site.clientDirectory) : Promise.resolve(undefined),
+  ]);
+
+  if (stopping) {
+    return;
+  }
+
+  browserTelemetry = createBrowserTelemetry({
+    observability,
+    assets: { 'web-app': applicationAssets, ...(siteAssets ? { 'web-site': siteAssets } : {}) },
+    origin,
+  });
+
+  visits = createVisitAnalytics({
+    enabled: true,
+    pool: database?.pool,
+    site: 'visomi-stack',
+    origin,
+    pages: stackVisitPages,
+  });
+
+  const exampleHarness = developmentPersistenceDemos(process.env);
+
+  backupObjects = api.exampleApiVersion === 1 ? api.createBackupObjects?.(process.env) : undefined;
+
+  const application = createGatewayApp({
+    visits,
+    ...(exampleHarness ? { exampleHarness } : {}),
+    ...(backupObjects ? { backupObjects } : {}),
+    api,
+    site,
+    application: angular,
+    auth,
+    observability,
+    staticDirectory: process.env.STATIC_ASSETS_PATH
+      ? resolve(process.env.STATIC_ASSETS_PATH)
+      : fileURLToPath(new URL('./static/', import.meta.url)),
+    browserTelemetry,
+    ...proxyConfiguration(process.env.AUTH_TRUST_PROXY),
+  });
+
+  server.on('request', application);
+
+  if (auth?.realtime) {
+    const module = await loadRealtime(new URL('../realtime/app.js', import.meta.url));
+
+    if (stopping) {
+      return;
+    }
+
+    realtime = module.attachRealtimeServer(server, auth.realtime);
+
+    await subscribeRealtime(realtimeTransport, realtime);
+  }
+
+  if (stopping) {
+    return;
+  }
+
+  server.listen(port, host, async () => {
+    observability.event('runtime.started');
+
+    if (process.env.NX_READY_SIGNAL_SOCKET) {
+      try {
+        const { emitReadySignal } = await import('@nx/js/ready-signal');
+
+        emitReadySignal(server);
+      } catch {
+        // Nx readiness is optional for standalone execution.
+      }
+    }
+  });
+}
+
+void bootstrap().catch(() => {
+  if (!stopping) {
+    void stop(1);
+  }
+});

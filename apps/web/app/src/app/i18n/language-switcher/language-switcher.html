@@ -1,0 +1,44 @@
+<nav class="inline-flex items-center" aria-label="Language" i18n-aria-label="@@language">
+  <svg
+    [class]="styles.iconClasses()"
+    data-slot="language-icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="m5 8 6 6m-7 0 6-6 2-3H2m5-3v3M13 21l5-11 5 11m-8-4h6" />
+  </svg>
+
+  <ul [class]="styles.classes()">
+    @for (language of languages; track language.code) {
+      <li>
+        @if (locale.startsWith(language.code)) {
+          <span
+            [class]="styles.optionClasses(true)"
+            [attr.lang]="language.code"
+            aria-current="true"
+            data-current-language
+          >
+            {{ language.label }}
+          </span>
+        } @else {
+          <a
+            [class]="styles.optionClasses(false)"
+            [href]="language.code === 'en' ? english() : spanish()"
+            [attr.hreflang]="language.code"
+            [attr.lang]="language.code"
+            rel="alternate"
+            data-language-switcher
+          >
+            {{ language.label }}
+          </a>
+        }
+      </li>
+    }
+  </ul>
+</nav>

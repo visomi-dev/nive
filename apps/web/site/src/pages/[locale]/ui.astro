@@ -1,0 +1,124 @@
+---
+import Container from '../../components/container.astro';
+import Text from '../../components/text.astro';
+import Heading from '../../components/heading.astro';
+import SiteLayout from '../../layouts/site.astro';
+import Link from '../../components/link.astro';
+
+import Actions from '../../components/ui-docs/actions.astro';
+import Typography from '../../components/ui-docs/typography.astro';
+import Layout from '../../components/ui-docs/layout.astro';
+import Shell from '../../components/ui-docs/shell.astro';
+import Data from '../../components/ui-docs/data.astro';
+import Forms from '../../components/ui-docs/forms.astro';
+import Feedback from '../../components/ui-docs/feedback.astro';
+import script from '../../scripts/ui-docs.js?url&no-inline';
+import { componentGroups, uiDocs } from '../../ui-docs';
+
+const locale = Astro.params.locale;
+if (locale !== 'en' && locale !== 'es') return new Response(null, { status: 404 });
+const labels = uiDocs[locale];
+const groups = [
+  { id: 'actions', Component: Actions },
+  { id: 'typography', Component: Typography },
+  { id: 'layout', Component: Layout },
+  { id: 'shell', Component: Shell },
+  { id: 'data', Component: Data },
+  { id: 'forms', Component: Forms },
+  { id: 'feedback', Component: Feedback },
+] as const;
+---
+
+<SiteLayout locale={locale} page="ui" title={labels.documentation} description={labels.intro}>
+  <script slot="head" is:inline type="module" src={script}></script>
+
+  <Container as="div" width="xl" gutter="compact">
+    <div class="grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-12">
+      <aside class="hidden py-12 lg:block">
+        <nav aria-label={labels.navigation} class="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto p-1 pr-4">
+          <Heading as="h2" ui-size="label" class="mb-5">
+            {labels.contents}
+          </Heading>
+
+          {groups.map(({ id }) => (
+            <div class="mb-6">
+              <Text ui-size="xs" tone="subtle" weight="semibold" class="mb-2 tracking-wide uppercase">
+                {labels.categories[id]}
+              </Text>
+
+              <ul class="space-y-1">
+                {componentGroups[id].map((component) => (
+                  <li>
+                    <Link
+                      href={`#${component}`}
+                      variant="muted"
+                      underline="none"
+                      class="flex min-h-11 items-center px-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    >
+                      {labels.names[component]}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      <div class="min-w-0 py-12 sm:py-16">
+        <div class="mb-12">
+          <Text ui-size="xs" tone="accent" mono class="mb-5 tracking-wide">
+            VISOMI / FRONTEND UI
+          </Text>
+
+          <Heading as="h1" ui-size="xl" class="max-w-3xl">
+            {labels.title}
+          </Heading>
+
+          <Text ui-size="md" tone="muted" class="mt-6 max-w-2xl">
+            {labels.intro}
+          </Text>
+
+          <Text ui-size="sm" tone="inherit" weight="medium" class="mt-4">
+            {Object.values(componentGroups).flat().length}{' '}
+
+            {locale === 'es' ? 'familias de componentes' : 'component families'}
+          </Text>
+
+          <Text ui-size="sm" tone="subtle" class="mt-3 max-w-2xl">
+            {labels.note}
+          </Text>
+
+          <nav aria-label={labels.navigation} class="mt-6 flex flex-wrap gap-2 lg:hidden">
+            {groups.map(({ id }) => (
+              <Link
+                href={`#${id}`}
+                variant="muted"
+                underline="none"
+                class="inline-flex min-h-11 items-center border border-zinc-300 px-3 text-sm dark:border-zinc-700"
+              >
+                {labels.categories[id]}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {groups.map(({ id, Component }) => (
+          <section id={id} class="scroll-mt-28">
+            <div class="mt-12 mb-2 flex flex-wrap items-center justify-between gap-3">
+              <Heading as="h2" ui-size="lg">
+                {labels.categories[id]}
+              </Heading>
+
+              <Text as="span" ui-size="xs" tone="subtle" mono>
+                {String(componentGroups[id].length).padStart(2, '0')}
+              </Text>
+            </div>
+
+            <Component locale={locale} />
+          </section>
+        ))}
+      </div>
+    </div>
+  </Container>
+</SiteLayout>

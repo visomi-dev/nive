@@ -1,0 +1,42 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { appShell, type ShellLayout } from '@visomi-stack/web-frontend-ui';
+type Props = HTMLAttributes<'div'> & { 'content-id': string; 'skip-label': string; layout?: ShellLayout };
+const {
+  'content-id': contentId,
+  'skip-label': skipLabel,
+  layout = 'sidebar',
+  class: className,
+  ...attributes
+} = Astro.props;
+---
+
+<div {...attributes} class:list={[appShell.classes(), className]}>
+  <a href={`#${contentId}`} class={appShell.skipClasses()}>
+    {skipLabel}
+  </a>
+
+  <div class={appShell.frameClasses({ layout })}>
+    <div class={appShell.sidebarClasses({ layout })}>
+      <slot name="sidebar" />
+    </div>
+
+    <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+      <div class={appShell.headerClasses()}>
+        <slot name="header" />
+      </div>
+
+      <main data-slot="page-scroll" id={contentId} tabindex="-1" class={appShell.scrollClasses()}>
+        <div data-slot="page-content" class={appShell.contentClasses()}>
+          <slot />
+        </div>
+      </main>
+
+      <slot name="footer" />
+    </div>
+  </div>
+
+  <div class={appShell.mobileClasses()}>
+    <slot name="mobile" />
+  </div>
+</div>

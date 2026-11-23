@@ -1,0 +1,25 @@
+---
+import { sitePath, type SiteLocale } from '../../content/site';
+import isotype from '../../../../../../assets/brand/isotype.svg?url';
+import logotype from '../../../../../../assets/brand/logotype-nive.svg?url';
+type Props = { locale: SiteLocale; compact?: boolean };
+const { locale, compact = false } = Astro.props;
+---
+
+<a
+  href={sitePath(locale, 'home')}
+  aria-label="Nive"
+  class="ui-focus-ring inline-flex min-h-11 shrink-0 items-center rounded-lg"
+>
+  <picture>
+    {compact && <source media="(max-width: 639px)" srcset={isotype} />}
+
+    <img
+      src={logotype}
+      alt=""
+      width="194"
+      height="40"
+      class:list={['h-10 object-contain dark:invert', compact ? 'w-10 sm:w-[194px]' : 'w-[194px]']}
+    />
+  </picture>
+</a>

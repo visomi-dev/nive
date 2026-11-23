@@ -1,0 +1,31 @@
+import { expect, test } from './fixtures/http';
+
+test('mounts the API and public site with the host Helmet policy', async ({ request }) => {
+  for (const [path, status] of [
+    ['/api/', 200],
+    ['/api/missing', 404],
+    ['/en/', 200],
+    ['/app/en/', 200],
+    ['/app/es/', 200],
+    ['/api/auth/passkeys', 401],
+    ['/api/example/vault/policy', 401],
+    ['/api/example/cloud/policy', 401],
+    ['/api/persistence/policy', 404],
+    ['/api/persistence/cloud-example/policy', 404],
+    ['/api/api/example/vault/policy', 404],
+  ] as const) {
+    const response = await request.get(path);
+    const headers = response.headers();
+
+    expect(response.status()).toBe(status);
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['referrer-policy']).toBe('no-referrer');
+    expect(headers['cross-origin-opener-policy']).toBe('same-origin');
+    expect(headers['content-security-policy']).toContain("script-src 'self'");
+    expect(headers['content-security-policy']).not.toContain('unsafe-inline');
+    expect(headers['content-security-policy']).not.toContain('upgrade-insecure-requests');
+    expect(headers['strict-transport-security']).toBeUndefined();
+    expect(headers['x-powered-by']).toBeUndefined();
+    expect(headers['x-request-id']).toMatch(/^[a-f0-9-]{36}$/);
+  }
+});

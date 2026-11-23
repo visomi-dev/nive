@@ -1,0 +1,226 @@
+import { expect, test } from '@playwright/test';
+
+function route(locale = 'en') {
+  return `/${locale}/`;
+}
+
+test('shows a localized 404 with the foundations theme and a working way home on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  const response = await page.goto('/es/missing-review-page/');
+
+  expect(response?.status()).toBe(404);
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Página no encontrada');
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /Manrope/);
+
+  const theme = page.getByRole('button', { name: 'Modo oscuro' });
+
+  await expect(theme).toBeEnabled();
+
+  await theme.focus();
+
+  await page.keyboard.press('Enter');
+
+  await expect(theme).toHaveAttribute('aria-pressed', 'true');
+
+  const fitsViewport = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+
+  expect(fitsViewport).toBe(true);
+
+  await page.getByRole('link', { name: 'Ir al inicio' }).click();
+
+  await expect(page).toHaveURL(/\/es\/$/);
+});
+
+for (const locale of ['en', 'es']) {
+  test(`renders ${locale} through Express and loads assets without errors`, async ({ page, request }, info) => {
+    const path = route(locale);
+    const response = await request.get(path);
+    const markup = await response.text();
+
+    expect(response.status()).toBe(200);
+    expect(markup).toContain(`<html lang="${locale}"`);
+    expect(markup).toContain(locale === 'en' ? 'A little more clarity' : 'Un poco más de claridad');
+    const errors: string[] = [];
+
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        errors.push(message.text());
+      }
+    });
+
+    await page.goto(path);
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      locale === 'en' ? 'A little more clarity for your money' : 'Un poco más de claridad para tu dinero',
+    );
+
+    await page.evaluate(() => document.fonts.ready);
+
+    await expect(page.locator('body')).toHaveCSS('font-family', /Manrope/);
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /Manrope/);
+
+    await page.reload();
+
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    expect(errors).toEqual([]);
+    expect(response.headers()['content-security-policy']).toContain("script-src 'self'");
+    expect(response.headers()['content-security-policy']).not.toContain("'unsafe-inline'");
+    const missing0 = await request.get('/api/missing');
+
+    expect(missing0.status()).toBe(404);
+    const missing1 = await request.get('/app/es/missing');
+
+    expect(missing1.status()).toBe(404);
+    const missing2 = await request.get('/missing/');
+
+    expect(missing2.status()).toBe(404);
+
+    await page.screenshot({
+      path: info.outputPath(`foundations-${locale}-desktop.png`),
+      fullPage: true,
+      animations: 'disabled',
+    });
+  });
+}
+
+test('remembers explicit themes and follows system changes only in system mode', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('nive.theme')) {
+      localStorage.setItem('nive.theme', 'dark');
+    }
+  });
+
+  await page.goto('/en/button/');
+
+  const control = page.locator('[data-theme-select]');
+
+  await expect(page.locator('html')).toHaveClass('dark');
+
+  await expect(control).toHaveValue('dark');
+
+  await control.selectOption('light');
+
+  await expect(page.locator('html')).not.toHaveClass('dark');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+
+  await expect(page.locator('html')).not.toHaveClass('dark');
+
+  await control.selectOption('system');
+
+  await expect(page.locator('html')).toHaveClass('dark');
+
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  await expect(page.locator('html')).not.toHaveClass('dark');
+
+  await control.selectOption('dark');
+
+  const stored = await page.evaluate(() => localStorage.getItem('nive.theme'));
+
+  expect(stored).toBe('dark');
+
+  await page.reload();
+
+  await expect(control).toHaveValue('dark');
+});
+
+test('keeps theme controls usable when storage is blocked', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new Error('synthetic_storage_blocked');
+      },
+    });
+  });
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+
+  await page.goto(route());
+
+  await expect(page.locator('html')).toHaveClass('dark');
+
+  await page.getByRole('button', { name: 'Dark theme', exact: true }).click();
+
+  await expect(page.locator('html')).not.toHaveClass('dark');
+});
+
+test('supports keyboard focus, reduced motion and a narrow viewport', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+
+  await page.goto(route('es'));
+
+  await page.keyboard.press('Tab');
+
+  await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
+
+  await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
+
+  const overflowing = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+
+  expect(overflowing).toBe(false);
+
+  const switcher = page.getByRole('button', { name: 'Tema oscuro', exact: true });
+
+  await expect(switcher).toBeEnabled();
+
+  await switcher.focus();
+
+  await expect(switcher).toHaveCSS('outline-style', 'solid');
+
+  await expect(switcher.locator('svg').first()).toHaveCSS('animation-name', 'none');
+
+  await page.evaluate(() => document.fonts.ready);
+
+  await page.screenshot({
+    path: info.outputPath('foundations-es-mobile-dark.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+});
+
+test('serves readable content with JavaScript disabled', async ({ browser }, info) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL: info.project.use.baseURL });
+
+  try {
+    const page = await context.newPage();
+
+    await page.goto(route('es'));
+
+    await expect(page.getByRole('heading', { name: 'Un poco más de claridad para tu dinero' })).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('uses the system preference when the stored theme is invalid', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('nive.theme', 'invalid'));
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+
+  await page.goto(route());
+
+  await expect(page.locator('html')).toHaveClass('dark');
+
+  const switcher = page.getByRole('button', { name: 'Dark theme', exact: true });
+
+  await expect(switcher).toHaveAttribute('aria-pressed', 'true');
+
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  await expect(switcher).toHaveAttribute('aria-pressed', 'false');
+});

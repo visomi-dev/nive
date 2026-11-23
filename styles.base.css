@@ -1,0 +1,261 @@
+@import '@fontsource/manrope/latin-400.css';
+@import '@fontsource/manrope/latin-500.css';
+@import '@fontsource/manrope/latin-600.css';
+@import '@fontsource/manrope/latin-700.css';
+@import '@fontsource/manrope/latin-800.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import 'tailwindcss' source(none);
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --radius-panel: 1.5rem;
+  --radius-control: 0.875rem;
+
+  --color-zinc-50: #f5f7f6;
+  --color-zinc-100: #edf2ef;
+  --color-zinc-200: #dce5df;
+  --color-zinc-300: #c5d3ca;
+  --color-zinc-400: #94aa9c;
+  --color-zinc-500: #596f61;
+  --color-zinc-600: #52665b;
+  --color-zinc-700: #3a5043;
+  --color-zinc-800: #24312c;
+  --color-zinc-900: #192220;
+  --color-zinc-950: #0c1311;
+
+  --color-blue-50: #eefaf2;
+  --color-blue-100: #daf5e3;
+  --color-blue-200: #baeccc;
+  --color-blue-300: #8ee6b1;
+  --color-blue-400: #73dba1;
+  --color-blue-500: #287f59;
+  --color-blue-600: #176448;
+  --color-blue-700: #14523c;
+  --color-blue-800: #173f30;
+  --color-blue-900: #143528;
+  --color-blue-950: #0d241a;
+  --color-feature: #173f30;
+  --color-accent: #d6f5a0;
+}
+
+@theme inline {
+  --color-canvas: var(--nive-canvas);
+  --color-surface: var(--nive-surface);
+  --color-raised: var(--nive-raised);
+  --color-ink: var(--nive-ink);
+  --color-muted: var(--nive-muted);
+  --color-brand: var(--nive-brand);
+}
+
+@layer base {
+  :root {
+    --ui-theme-duration-ms: 400;
+    --ui-theme-easing: ease-in-out;
+    color-scheme: light;
+    --nive-canvas: #edf2ef;
+    --nive-surface: #ffffff;
+    --nive-raised: #edf2ef;
+    --nive-ink: #14201b;
+    --nive-muted: #52665b;
+    --nive-brand: #176448;
+  }
+
+  html.dark,
+  :root:has(app-root.dark) {
+    color-scheme: dark;
+    --nive-canvas: #0c1311;
+    --nive-surface: #192220;
+    --nive-raised: #24312c;
+    --nive-ink: #f1f6f3;
+    --nive-muted: #afc2b7;
+    --nive-brand: #8ee6b1;
+  }
+
+  html {
+    min-height: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-blue-700);
+    color: var(--color-white);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* Limit the shared timing to theme changes, including modal backdrops and the page canvas. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:is([data-theme-transition], :has([data-theme-transition])) {
+    &,
+    & *,
+    & *::before,
+    & *::after,
+    & *::placeholder,
+    & *::marker,
+    & *::file-selector-button,
+    & ::backdrop {
+      transition-property:
+        color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, box-shadow, filter,
+        --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+      transition-duration: calc(var(--ui-theme-duration-ms) * 1ms);
+      transition-timing-function: var(--ui-theme-easing);
+      transition-delay: 0s;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-theme-transition], :has([data-theme-transition])) {
+    &,
+    & *,
+    & *::before,
+    & *::after,
+    & *::placeholder,
+    & *::marker,
+    & *::file-selector-button,
+    & ::backdrop {
+      transition-duration: 0s;
+      transition-delay: 0s;
+    }
+  }
+}
+
+/* An external image keeps SVG mask IDs isolated across simultaneous indicators. */
+@utility ui-loader {
+  background-color: currentColor;
+  mask-image: url('./assets/brand/nive-loader-smil.svg');
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-mode: alpha;
+
+  @media (prefers-reduced-motion: reduce) {
+    mask-image: url('./assets/brand/isotype.svg');
+  }
+}
+
+@utility ui-focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+
+  &:focus-visible {
+    outline-color: var(--color-blue-600);
+  }
+
+  .dark &:focus-visible {
+    outline-color: var(--color-blue-400);
+  }
+}
+
+@utility ui-consent-card {
+  inline-size: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  max-inline-size: 20rem;
+  margin-block: 1rem max(1rem, env(safe-area-inset-bottom, 0px));
+  margin-inline-start: env(safe-area-inset-left, 0px);
+
+  /* Keep the card in flow on touch devices and in short viewports. */
+  @media (min-width: 64rem) and (min-height: 46rem) and (hover: hover) and (pointer: fine) {
+    position: fixed;
+    z-index: 20;
+    inset-inline-start: max(1rem, env(safe-area-inset-left, 0px));
+    inset-block-end: max(var(--ui-consent-bottom, 1rem), env(safe-area-inset-bottom, 0px));
+    margin: 0;
+
+    /* Yield to keyboard focus outside the card without shifting the page or changing the tab order. */
+    body:has(:focus-visible:not(.ui-consent-card *, [tabindex='-1'])) & {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+}
+
+@utility ui-consent-progress {
+  appearance: none;
+  display: block;
+  inline-size: 100%;
+  block-size: 0.25rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-zinc-200);
+  color: var(--color-blue-600);
+
+  .dark & {
+    background: var(--color-zinc-700);
+    color: var(--color-blue-400);
+  }
+
+  &::-webkit-progress-bar {
+    background: transparent;
+  }
+
+  &::-webkit-progress-value {
+    background: currentColor;
+  }
+
+  &::-moz-progress-bar {
+    background: currentColor;
+  }
+
+  @media (forced-colors: active) {
+    appearance: auto;
+  }
+}
+
+@keyframes ui-theme-enter {
+  from {
+    translate: 0 4rem;
+    opacity: 0;
+  }
+  to {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+
+@keyframes ui-theme-leave {
+  from {
+    translate: 0 0;
+    opacity: 1;
+  }
+  to {
+    translate: 0 -4rem;
+    opacity: 0;
+  }
+}
+
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-theme-switcher[data-theme-animated] {
+      .ui-theme-sun {
+        animation: ui-theme-enter calc(var(--ui-theme-duration-ms) * 1ms) var(--ui-theme-easing);
+      }
+
+      .ui-theme-moon {
+        animation: ui-theme-leave calc(var(--ui-theme-duration-ms) * 1ms) var(--ui-theme-easing);
+      }
+
+      .dark & .ui-theme-sun {
+        animation-name: ui-theme-leave;
+      }
+
+      .dark & .ui-theme-moon {
+        animation-name: ui-theme-enter;
+      }
+    }
+  }
+}

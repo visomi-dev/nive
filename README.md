@@ -1,0 +1,109 @@
+# Nive
+
+Nive is a web workspace for personal finances. This initial release introduces its
+website, account access, and the application shell in English and Spanish.
+It combines Screaming Architecture with Domain-Driven Design: business domains
+and capabilities determine feature organization, while cross-cutting infrastructure
+lives in shared libraries. The intended runtime direction is Angular SSR, Astro,
+Express, and explicit gateway, worker, and realtime boundaries.
+
+## Current state
+
+The API project, `web-api` in `apps/web/api`, exports `createApp()` separately
+from its standalone server. `GET /` returns `{"message":"Hello API"}`.
+The `web-backend-shared` library contains the Pino/OpenTelemetry integration.
+The `web-gateway` application mounts the compiled API at `/api` and owns its
+HTTP listener, shared telemetry and optional PostgreSQL pool. Authentication
+runs once in the host; the embedded API uses inherited mode.
+
+The Astro website (`web-site`) is mounted by the gateway at `/en/` and `/es/`.
+The Angular SSR application (`web-app`) is mounted by the gateway at `/app/en/` and
+`/app/es/`. Both use shared Tailwind foundations and light/dark/system themes.
+Worker and realtime applications remain unimplemented. The API now supports PostgreSQL-backed passkey authentication and durable sessions.
+Business domains remain future work; this slice does not demonstrate a complete DDD model.
+
+The agreed topology is documented in [Architecture](docs/architecture.md).
+Descriptions of the previous stack and Nive are reference material, not evidence
+that their features exist in this repository.
+
+## Local development
+
+Use Node **24.15.0** from `.node-version` and pnpm **12.15.0** from
+`package.json#devEngines.packageManager`. Nx is pinned to **24.0.1**.
+Dependency versions and resolution are recorded in `package.json` and `pnpm-lock.yaml`.
+
+From the repository root, with those tools available:
+
+```sh
+pnpm install --frozen-lockfile
+NX_DAEMON=false pnpm nx run web-api:serve
+# Or serve the gateway, which builds and mounts the compiled API:
+pnpm nx serve web-gateway
+```
+
+For a new template checkout used with coding agents, follow the
+[local agent tooling setup](docs/development.md#local-agent-tooling) after installing dependencies.
+
+Run one server at a time. Open <http://localhost:3000/> for the standalone API
+or <http://localhost:3000/api/> for the gateway. Stop it with Ctrl+C.
+The server reads `HOST` and `PORT` from the process environment; their defaults
+are `localhost` and `3000`. `NODE_ENV` selects a controlled telemetry environment
+label; logs are local JSON and no trace or metric exporter is configured by default.
+Authentication requires PostgreSQL and explicit configuration; without it, auth routes
+fail closed with 503 while the public greeting remains available. There is no Redis
+dependency or `.env` loader. See the [API guide](apps/web/api/README.md) for migration
+commands, authentication endpoints and middleware ownership.
+
+For local containers, supply a high-entropy `SESSION_SECRET` of at least 32 bytes
+and run `docker compose up --build app` to start the gateway with the website at
+`/`, Angular under `/app`, and the API under `/api`. The separate `database-init` service
+waits for healthy PostgreSQL and applies checked-in migrations before `app` can
+start. The API never migrates or seeds during startup. See
+[container database initialization](docs/development.md#container-database-initialization)
+for reruns and seed ownership.
+
+For integrated live reload of the website, Angular application and API, run
+`pnpm dev` on the host,
+or `podman compose -f compose.yaml -f compose.dev.yaml up -d --build` in containers.
+Both modes use the compiled gateway and full browser reload after successful
+builds. See [integrated live reload](docs/development.md#integrated-live-reload)
+for environment settings, dependencies, port ownership and switching modes.
+
+The serve command and HTTP response have been checked. A fresh worktree
+installation with `pnpm install --frozen-lockfile` has also been verified.
+
+## Build and remaining gaps
+
+- The API build emits `app.js`, `main.js`, shared chunks, and CommonJS package
+  metadata under `dist/apps/web/api`. Preserve that complete output directory
+  and provide its declared runtime dependencies when consuming it.
+- The gateway emits ESM `app.js` and `main.js` under `dist/apps/web/gateway`.
+  Keep the API output as its sibling directory; the gateway imports `../api/app.js`.
+  Process integration tests verify that mount, inherited authentication, shared
+  telemetry and resource cleanup. It also imports `../site/server/entry.mjs` and
+  serves its sibling `client` directory. Angular SSR is imported from
+  `../app/server/server.mjs` and mounted under `/app`.
+- API and gateway Playwright request suites verify their HTTP contracts using
+  separate owned Compose projects with container PostgreSQL, the compiled
+  application, and local telemetry destinations. Run
+  `pnpm nx e2e web-api` and `pnpm nx e2e web-gateway`.
+- The container runtime defaults to the gateway and selects the standalone API or gateway with
+  `APP_NAME=web-api|web-gateway`, with a separate database initialization image. Redis and MinIO services remain in Compose from
+  the earlier infrastructure setup; the API authentication slice does not use
+  them. Containers do not establish worker or deployment readiness.
+
+## Documentation
+
+- [API authentication and persistence](apps/web/api/README.md): schema, migrations, endpoints, ownership and verification.
+- [Backend database infrastructure](libs/backend/db/README.md): database resources, schemas and explicit migration commands.
+- [Shared backend infrastructure](libs/backend/shared/README.md): injection, mail and realtime utilities.
+- [Public website](docs/website.md): page structure, content, design and local verification.
+- [Web foundations](docs/web-foundations.md): styling, themes, localized UI, SSR and Express integration.
+- [Architecture](docs/architecture.md): current structure, intended topology, and open decisions.
+- [Development](docs/development.md): project discovery, verification, contribution conventions, and maintenance.
+- [Deployment and telemetry](docs/deployment.md): build artifacts, CI checks, release verification, and capture policies.
+- [Agent guidance](AGENTS.md): repository instructions for coding agents.
+
+## Attribution
+
+Based on [Visomi Stack, merge #48](https://github.com/visomi-dev/visomi-stack/commit/caa7e5597906f389fa515002ce1f5a1e17815349). The upstream package declares MIT. See the [MIT license](LICENSE) and the [font notices](licenses).
