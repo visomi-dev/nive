@@ -53,7 +53,7 @@ const helpUrl = sitePath(locale, 'help');
 
       <nav class="hidden items-center gap-7 text-sm font-semibold text-muted lg:flex" aria-label={copy.navigationLabel}>
         {copy.navigation.map((label, index) => (
-          <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-link marketing-nav-link">
+          <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-nav-link marketing-muted">
             {label}
           </Link>
         ))}
@@ -91,7 +91,7 @@ const helpUrl = sitePath(locale, 'help');
       aria-label={copy.navigationLabel}
     >
       {copy.navigation.map((label, index) => (
-        <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-link">
+        <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-muted">
           {label}
         </Link>
       ))}
@@ -261,7 +261,7 @@ const helpUrl = sitePath(locale, 'help');
     <section
       id="privacy"
       aria-labelledby="privacy-title"
-      class="scroll-mt-8 bg-feature px-5 py-16 text-white md:px-10 md:py-24"
+      class="marketing-privacy scroll-mt-8 bg-feature px-5 py-16 text-white md:px-10 md:py-24"
     >
       <div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-24">
         <div>
