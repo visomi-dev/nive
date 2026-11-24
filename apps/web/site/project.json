@@ -10,6 +10,7 @@
       "cache": true,
       "inputs": [
         "production",
+        { "env": "NIVE_PUBLIC_ORIGIN" },
         "{workspaceRoot}/styles.base.css",
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/pnpm-lock.yaml",

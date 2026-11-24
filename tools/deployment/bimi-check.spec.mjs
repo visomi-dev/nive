@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import brand from '../../assets/brand/public.json' with { type: 'json' };
+
 import { checkBimi } from './bimi-check.mjs';
 
 const origin = 'https://app.example.test';
-const logo = `${origin}/static/brand/bimi/v1/nive.svg`;
+const logo = `${origin}/static/brand/${brand.bimiLogo}`;
 
 test('monitoring-only DMARC and a missing certificate cannot pass readiness', async () => {
   const status = await checkBimi('example.test', origin, {

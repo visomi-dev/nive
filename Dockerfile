@@ -34,6 +34,7 @@ CMD ["node", "tools/development/live-reload.mjs"]
 FROM workspace AS build
 
 ARG APP_NAME=web-gateway
+ARG NIVE_PUBLIC_ORIGIN
 
 RUN case "$APP_NAME" in \
       web-api) printf '%s\n' 'dist/apps/web/api/main.js' > app-entrypoint ;; \

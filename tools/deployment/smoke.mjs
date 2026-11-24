@@ -9,7 +9,7 @@ const request = (path) => fetch(new URL(path, origin), { redirect: 'manual', sig
 const redirect = await request('/');
 
 assert.equal(redirect.status, 302);
-assert.equal(new URL(redirect.headers.get('location'), origin).pathname, '/en/');
+assert.equal(new URL(redirect.headers.get('location'), origin).pathname, '/es/');
 const api = await request('/api/');
 const greeting = await api.json();
 

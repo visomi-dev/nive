@@ -13,8 +13,8 @@ installed in a separate build stage. The final image preserves
 `dist/apps/web/{gateway,api,app,site}` together, runs as the unprivileged `node`
 user, and contains neither pnpm nor the root development tooling. The Node base
 is pinned by version and multi-platform image digest. Update the version and
-digest together and verify both images after updating. Compose explicitly
-selects `web-api` unless `APP_NAME` is supplied.
+digest together and verify both images after updating. Compose defaults to
+`web-gateway` unless `APP_NAME` is supplied.
 
 Application composition loads compiled sibling artifacts without starting extra
 listeners. The owning executable initializes and closes process-wide resources.
@@ -106,16 +106,76 @@ SDK or merging code does not authorize applying a plan or enabling telemetry.
 Keep environment-specific selections and credentials in operator-controlled
 configuration, outside the public documentation.
 
-After a release passes its health checks, verify its public origin:
+### Railway production
+
+[The Railway definition](../.railway/railway.ts) manages the gateway and a
+private PostgreSQL service with a data volume. The root Dockerfile builds the
+gateway, website, app and API together. The site uses `NIVE_PUBLIC_ORIGIN` at
+build time for its canonical URLs and social metadata.
+
+PostgreSQL holds authentication and application state. The first release runs
+one gateway replica with its existing in-process realtime transport. The
+example Vault's cloud object backups require a separate private bucket and
+remain unavailable until that feature is provisioned. Redis and Jaeger can be
+introduced when there is a shared transport or private trace storage
+requirement. Browser telemetry retains the existing consent policy.
+
+1. Confirm the exact GitHub `main` SHA has a successful CI run with a successful
+   `required` job. Confirm Railway's GitHub installation can access the
+   repository and its check suites. The gateway source uses `main` with
+   **Wait for CI**.
+2. Install workspace dependencies with `pnpm install --frozen-lockfile` and link
+   the Nive production environment. Use Railway CLI 5.74 or later. Save the
+   redacted plan for review, keeping the JSON artifact in a private directory
+   outside the checkout.
+
+   ```sh
+   umask 077
+   nive_plan_dir=$(mktemp -d)
+   railway config plan --out "$nive_plan_dir/plan.json"
+   ```
+
+3. After approval, apply that exact plan with
+   `railway config apply --plan "$nive_plan_dir/plan.json" --yes`. Replan and
+   review again if the target or source changed. Railway creates the
+   database password and session secret from generators. Manage any optional
+   SMTP or Google credentials in Railway variables. Keep database connections
+   on the private network and confirm PostgreSQL has no public TCP proxy.
+4. Railway's IaC planner does not register a new custom domain. After the
+   gateway exists, register it once with
+   `railway domain nive.visomi.dev --port 8080 --service web-gateway`.
+   Use the returned DNS records to update only the Nive hostname. Publish the
+   CNAME in DNS-only mode and add the Railway verification TXT record. Wait
+   for ownership verification and the HTTPS certificate. Keep this hostname
+   aligned with both the auth settings and the build origin in the IaC.
+5. Confirm the gateway deployment SHA and health check at `/api/`. Railway
+   runs `node libs/backend/db/tools/migrate.mjs` in a separate pre-deploy
+   container using the final image and private database connection. If the
+   first migration starts before PostgreSQL is ready, wait for the database
+   and retry the same approved revision via Railway's deployment history.
+
+After a release passes its health checks, verify its public origin.
 
 ```sh
-node tools/deployment/smoke.mjs https://nive.example.invalid
+node tools/deployment/smoke.mjs https://nive.visomi.dev
 ```
 
-The smoke check uses only public requests. Avoid publishing raw HTTP logs,
-headers, exceptions, traces or credentials when diagnosing a deployment.
+Check that a fresh browser can reach sign-in from the app entry point, read an
+anonymous session and see the expected providers. Use a synthetic account and
+approved mailbox to verify registration and sign-in when SMTP is configured.
+Record which capabilities were exercised together with the CI run, deployment
+ID, SHA and smoke result. Avoid publishing raw HTTP logs, headers, exceptions,
+traces or credentials.
 
-## Enabling authentication later
+For later releases, let Railway deploy the CI-verified push to `main` and
+repeat the smoke check. If a release must be rolled back, select the previous
+successful gateway deployment in Railway after checking compatibility with the
+applied database migrations. An image rollback leaves the database schema and
+volume in place. On the first release there is no prior Nive deployment to
+restore. Pause gateway autodeploys and restore the saved Nive DNS records if
+the cutover must be undone.
+
+## Authentication configuration
 
 Provision a private PostgreSQL service and supply its connection through
 `DATABASE_URL`. Supply a random session secret
@@ -150,12 +210,11 @@ context are preserved. SSR engines are scoped to each composed application and
 rendered responses are not cached, including when a parent owns Helmet.
 
 Run the checked-in migrations as an explicit release step before enabling the
-database-backed service. The current `database-init` image owns migration tooling;
-the production image does not contain Drizzle Kit or migration sources. Do not
-copy Nive's migration command or assume migration layouts match. See the
-[API guide](../apps/web/api/README.md) and
+database-backed service. Compose uses the `database-init` image. Railway uses
+the checked-in SQL and Node migrator packaged in the production image, without
+Drizzle Kit or Nx. Gateway startup does not run migrations. Email verification
+needs SMTP configuration. See the [API guide](../apps/web/api/README.md) and
 [database initialization](development.md#container-database-initialization).
-Email verification additionally needs the repository's SMTP configuration.
 
 ## Observability and future workers
 
