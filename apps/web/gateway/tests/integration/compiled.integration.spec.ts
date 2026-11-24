@@ -519,7 +519,7 @@ describe('compiled ESM gateway and embedded API', () => {
         const code = messages[messages.length - 1].match(/\b\d{6}\b/)![0];
         const mail = messages[messages.length - 1].replace(/=\r?\n/g, '').replace(/=3D/g, '=');
 
-        expect(mail).toContain(`${authOrigin}/static/brand/email/v1/nive.png`);
+        expect(mail).toContain(`${authOrigin}/static/brand/email/v2/nive.png`);
         const verified = await request('POST', '/email/verify', { flowId: registered.body.flowId, code });
 
         expect(verified.status).toBe(200);

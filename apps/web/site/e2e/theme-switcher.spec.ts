@@ -42,7 +42,10 @@ for (const [adapter, path] of [
         const icons = Array.from(button.querySelectorAll('svg'))
           .flatMap((icon) => icon.getAnimations())
           .filter((animation) => animation instanceof CSSAnimation);
-        const colors = document.getAnimations().filter((animation) => animation instanceof CSSTransition);
+        // Sample the elements whose colors are asserted. Descendant transitions can restart as inherited colors change.
+        const colors = probes
+          .flatMap((probe) => probe.getAnimations())
+          .filter((animation) => animation instanceof CSSTransition);
         const animations = [...icons, ...colors];
         const timing = animations.map((animation) => ({
           duration: animation.effect!.getTiming().duration,

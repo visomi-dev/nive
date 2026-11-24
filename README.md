@@ -1,5 +1,8 @@
 # Nive
 
+Nive is short for Nirvana Economics and helps you see which payments are covered, how much is left and what carries into the next budget period.
+Read the [product vision](docs/product/vision.md) to see how one budget period informs the next and what works today.
+
 Nive is a web workspace for personal finances. This initial release introduces its
 website, account access, and the application shell in English and Spanish.
 It combines Screaming Architecture with Domain-Driven Design: business domains
@@ -64,7 +67,7 @@ for reruns and seed ownership.
 
 For integrated live reload of the website, Angular application and API, run
 `pnpm dev` on the host,
-or `podman compose -f compose.yaml -f compose.dev.yaml up -d --build` in containers.
+or `podman compose -f compose.yaml -f compose.dev.yaml up -d --build app mailpit` in containers.
 Both modes use the compiled gateway and full browser reload after successful
 builds. See [integrated live reload](docs/development.md#integrated-live-reload)
 for environment settings, dependencies, port ownership and switching modes.

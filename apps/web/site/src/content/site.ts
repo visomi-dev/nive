@@ -2,11 +2,12 @@ import { en } from './en';
 import { es } from './es';
 
 export type SiteLocale = 'en' | 'es';
-export type SitePage = 'home' | 'architecture' | 'docs' | 'ui' | 'foundations';
+export type SitePage = 'home' | 'help' | 'architecture' | 'docs' | 'ui' | 'foundations';
 
 export const repositoryUrl = 'https://github.com/visomi-dev/nive';
 const paths: Record<SitePage, string> = {
   home: '',
+  help: 'help/',
   architecture: 'architecture/',
   docs: 'docs/',
   ui: 'ui/',

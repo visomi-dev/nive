@@ -11,9 +11,9 @@ export default defineConfig({
   trailingSlash: 'always',
   build: { inlineStylesheets: 'never' },
   i18n: {
-    defaultLocale: 'en',
+    defaultLocale: 'es',
     locales: ['en', 'es'],
-    routing: { prefixDefaultLocale: true, redirectToDefaultLocale: true },
+    routing: 'manual',
   },
   vite: {
     // The gateway permits only external scripts, including small processed TypeScript entries.

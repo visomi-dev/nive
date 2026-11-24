@@ -3457,6 +3457,76 @@
       <trans-unit id="cloudNoWorkspaces" datatype="html">
         <source>You don’t have any Cloud workspaces yet.</source>
       </trans-unit>
+      <trans-unit id="firstUseTitle" datatype="html">
+        <source>What would you like to organize first?</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">3,5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseIntroduction" datatype="html">
+        <source>Welcome to Nive. You can get started on your own.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">5,7</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseContinue" datatype="html">
+        <source>Continue to Nive</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">7,10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseExampleTitle" datatype="html">
+        <source>Explore an example</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">12,14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseExampleDescription" datatype="html">
+        <source>See how the dashboard looks with sample data.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">14,16</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseOpenExample" datatype="html">
+        <source> Open example dashboard </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">17,21</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseBudgetTitle" datatype="html">
+        <source>Plan your first budget</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">22,24</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseBudgetDescription" datatype="html">
+        <source> A budget helps plan your income and expenses. Creating a budget is not available yet. </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">25,29</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseImportTitle" datatype="html">
+        <source>Bring in your records</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">30,32</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="firstUseImportDescription" datatype="html">
+        <source> Start with records you already have when import becomes available. </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
+          <context context-type="linenumber">33,37</context>
+        </context-group>
+      </trans-unit>
     </body>
   </file>
 </xliff>

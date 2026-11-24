@@ -41,20 +41,20 @@ its own compiled module by default.
    `pnpm nx run backend-shared:emails-build`.
 4. Review the rendered email and run the branding, mail and gateway checks.
 
-The initial PNG is an opaque, white-backed export of the approved horizontal
+The current PNG is an opaque, white-backed export of the Margen horizontal
 mark, including padding. Its 412 × 104 pixels render at 206 × 52 pixels. The
 image stays legible without relying on email-client CSS inversion. The sender
 name, footer and plain-text alternative remain useful when remote images are
-blocked. The initial export used ImageMagick 7.1.1-43:
+blocked. The version 2 export uses ImageMagick:
 
 ```sh
-magick -background white -density 144 assets/brand/logotype-nive.svg \
-  -resize 388x80 -bordercolor white -border 12 -alpha remove -alpha off \
-  -depth 8 -strip PNG24:assets/brand/email/v1/nive.png
+magick -background white -density 144 assets/brand/logotype.svg \
+  -resize 388x80 -gravity center -extent 412x104 -alpha remove -alpha off \
+  -depth 8 -strip PNG24:assets/brand/email/v2/nive.png
 ```
 
 This is an editing command, not a runtime or CI dependency. Future exports must
-use a new version path. The initial BIMI derivative centers the approved isotype
+use a new version path. The version 2 BIMI derivative centers the Margen symbol
 on an opaque 512 × 512 square with a Tiny PS declaration and descriptive text.
 It is a candidate for issuer validation, not a certified mark.
 

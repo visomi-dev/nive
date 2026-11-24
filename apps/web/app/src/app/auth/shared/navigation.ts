@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { Service, inject, signal } from '@angular/core';
 import { Router, type UrlTree } from '@angular/router';
 
+import { welcomeEntry } from '../../onboarding/welcome-entry';
 import { Session } from '../session/session';
 import type { Notified } from '../session/models';
 import { destination, safeReturnTo } from '../session/navigation';
@@ -36,14 +37,23 @@ export class AuthNavigation {
     return this.router.parseUrl(this.returnPath() ?? '/security');
   }
 
-  async complete(result?: Notified): Promise<void> {
+  async complete(result?: Notified, newPersonalAccount?: string): Promise<void> {
     this.failedNotification.set(result?.notificationSent === false);
+
+    const full = this.session.full();
+    const returnTo = full ? this.returnPath() : null;
+
+    if (full && !returnTo && newPersonalAccount && this.session.user()?.id === newPersonalAccount) {
+      await this.router.navigateByUrl('/welcome', { info: welcomeEntry(newPersonalAccount), replaceUrl: true });
+
+      return;
+    }
 
     await this.router.navigateByUrl(
       this.session.status() !== 'ready'
         ? '/auth/sign-in'
-        : this.session.full()
-          ? (this.returnPath() ?? '/home')
+        : full
+          ? (returnTo ?? '/home')
           : destination(this.session.snapshot()),
     );
   }

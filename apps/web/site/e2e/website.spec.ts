@@ -5,25 +5,26 @@ import { selectTheme } from './support/theme';
 
 for (const locale of ['en', 'es']) {
   for (const width of [360, 1024, 1440]) {
-    test(`the ${locale} website opens the mounted app at ${width}px`, async ({ page }) => {
+    test(`the ${locale} website opens registration in the mounted app at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
 
       await page.goto(`/${locale}/`);
 
       const header = page.locator('[data-site-header]');
-      const label = locale === 'en' ? 'Open Nive' : 'Abrir Nive';
+      const label = locale === 'en' ? 'Get started' : 'Empezar';
+      const link = header.getByRole('link', { name: label, exact: true });
 
-      if (width < 1280) {
-        await header.locator('[data-site-menu] summary').click();
+      await expect(link).toHaveAttribute('href', '/app/' + locale + '/auth/sign-up');
+
+      if (width >= 640) {
+        const signIn = header.getByRole('link', { name: locale === 'en' ? 'Sign in' : 'Entrar', exact: true });
+
+        await expect(signIn).toHaveAttribute('href', '/app/' + locale + '/auth/sign-in');
       }
-
-      const link = header.getByRole('link', { name: label, exact: true }).filter({ visible: true });
-
-      await expect(link).toHaveAttribute('href', `/app/${locale}/`);
 
       await link.click();
 
-      await expect(page).toHaveURL(new RegExp(`/app/${locale}/auth/sign-in$`));
+      await expect(page).toHaveURL(new RegExp('/app/' + locale + '/auth/sign-up$'));
 
       await expect(page.locator('html')).toHaveAttribute('lang', locale === 'en' ? 'en-US' : 'es');
 
@@ -32,7 +33,7 @@ for (const locale of ['en', 'es']) {
   }
 
   test(`public ${locale} pages render complete HTML through Express`, async ({ request }) => {
-    for (const suffix of ['', 'architecture/', 'docs/', 'foundations/', 'ui/']) {
+    for (const suffix of ['', 'help/', 'architecture/', 'docs/', 'foundations/', 'ui/']) {
       const response = await request.get(`/${locale}/${suffix}`);
       const html = await response.text();
 
@@ -72,10 +73,6 @@ for (const locale of ['en', 'es']) {
     expect(sizes).toHaveLength(2);
     expect(sizes.reduce((total, size) => total + size, 0)).toBeLessThan(initialScriptBudget);
     expect(errors).toEqual([]);
-
-    await page.getByRole('checkbox').uncheck();
-
-    await expect(page.getByRole('checkbox')).not.toBeChecked();
 
     const switcher = page.getByRole('button', { name: locale === 'en' ? 'Dark theme' : 'Tema oscuro', exact: true });
 
@@ -122,23 +119,20 @@ test('mobile navigation and locale changes work without JavaScript', async ({ br
 
     await page.keyboard.press('Tab');
 
-    await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
+    await expect(page.getByRole('link', { name: 'Ir al contenido' })).toBeFocused();
 
     await page.keyboard.press('Enter');
 
     await expect(page.getByRole('main')).toBeFocused();
 
-    const menu = page.locator('[data-site-menu]');
+    const navigation = page.getByRole('navigation', { name: 'Navegación principal' });
+    const howItWorks = navigation.getByRole('link', { name: 'Cómo funciona' });
 
-    await menu.locator('summary').focus();
+    await howItWorks.focus();
 
-    await page.keyboard.press('Space');
+    await page.keyboard.press('Enter');
 
-    await expect(menu).toHaveAttribute('open', '');
-
-    await menu.getByRole('link', { name: 'Arquitectura', exact: true }).click();
-
-    await expect(page).toHaveURL(/\/es\/architecture\/$/);
+    await expect(page).toHaveURL(/\/es\/#how-it-works$/);
 
     const language = page.getByRole('navigation', { name: 'Idioma', exact: true });
     const english = language.getByRole('link', { name: 'English', exact: true });
@@ -153,7 +147,7 @@ test('mobile navigation and locale changes work without JavaScript', async ({ br
 
     await page.keyboard.press('Enter');
 
-    await expect(page).toHaveURL(/\/en\/architecture\/$/);
+    await expect(page).toHaveURL(/\/en\/$/);
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
@@ -163,11 +157,11 @@ test('mobile navigation and locale changes work without JavaScript', async ({ br
         .getByRole('link', { name: 'Español', exact: true }),
     ).toHaveAttribute('hreflang', 'es');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('How Nive works');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Life moves. Your money makes sense.');
 
     await page.goto('/es/');
 
-    const question = page.getByText('¿Por qué combinar Astro y Angular?', { exact: true });
+    const question = page.getByText('¿Nive se conecta a mi banco?', { exact: true });
 
     await question.click();
 
@@ -180,7 +174,7 @@ test('mobile navigation and locale changes work without JavaScript', async ({ br
 test('public navigation points to real routes and anchor targets', async ({ page, request }) => {
   const paths = new Set<string>();
 
-  for (const route of ['/es/', '/es/docs/', '/es/architecture/', '/es/foundations/', '/es/ui/']) {
+  for (const route of ['/es/', '/es/help/', '/es/docs/', '/es/architecture/', '/es/foundations/', '/es/ui/']) {
     await page.goto(route);
 
     const destinations = await page
@@ -212,7 +206,7 @@ for (const width of [320, 360, 768, 1440]) {
 
       await page.emulateMedia({ reducedMotion: 'reduce' });
 
-      for (const route of ['', 'architecture/', 'docs/']) {
+      for (const route of ['', 'help/', 'architecture/', 'docs/']) {
         await page.goto(`/es/${route}`);
 
         await selectTheme(page, theme);
@@ -239,13 +233,13 @@ for (const width of [320, 360, 768, 1440]) {
   }
 }
 
-test('the colored vision panel retains readable contrast in both themes', async ({ page }) => {
+test('the privacy section retains readable contrast in both themes', async ({ page }) => {
   await page.goto('/en/');
 
   for (const theme of ['light', 'dark']) {
     await selectTheme(page, theme);
 
-    const ratios = await page.locator('[aria-labelledby=vision-title]').evaluate((section) => {
+    const ratios = await page.locator('[aria-labelledby=privacy-title]').evaluate((section) => {
       const canvas = document.createElement('canvas');
 
       canvas.width = 1;
@@ -269,7 +263,7 @@ test('the colored vision panel retains readable contrast in both themes', async 
       };
       const background = luminance(getComputedStyle(section).backgroundColor);
 
-      return Array.from(section.querySelectorAll('h2, h3, p, a, span')).map((element) => {
+      return Array.from(section.querySelectorAll('h2, h3, p, a')).map((element) => {
         const foreground = luminance(getComputedStyle(element).color);
 
         return (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05);
@@ -278,5 +272,53 @@ test('the colored vision panel retains readable contrast in both themes', async 
 
     expect(ratios.length).toBeGreaterThan(0);
     expect(ratios.every((ratio) => ratio >= 4.5)).toBe(true);
+  }
+});
+
+test('the legacy English help URL and localized social cards remain available', async ({ page, request }) => {
+  const homepage = await request.get('/', { maxRedirects: 0 });
+
+  expect(homepage.status()).toBe(302);
+  expect(homepage.headers()['location']).toBe('/es/');
+
+  await page.goto('/docs/');
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('A good place to start.');
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/en\/help\/$/);
+
+  const iconPath = await page.locator('link[rel="icon"]').first().getAttribute('href');
+  const legacyIcon = await request.get('/favicon.svg');
+  const icon = await request.get(iconPath!);
+  const legacySvg = await legacyIcon.text();
+  const sharedSvg = await icon.text();
+
+  expect(legacyIcon.ok()).toBe(true);
+  expect(legacyIcon.headers()['content-type']).toContain('image/svg+xml');
+  expect(sharedSvg).toMatch(/^<svg\b/);
+  expect(legacySvg).toBe(sharedSvg);
+
+  for (const locale of ['en', 'es']) {
+    await page.goto('/' + locale + '/');
+
+    const image = page.locator('meta[property="og:image"]');
+    const asset = '/images/seo/' + locale + '/home.png';
+
+    await expect(image).toHaveAttribute('content', new RegExp(asset + '$'));
+
+    const response = await request.get(asset);
+
+    expect(response.ok()).toBe(true);
+    expect(response.headers()['content-type']).toContain('image/png');
+
+    await page.goto('/social-image-previews/' + locale + '/home.html');
+
+    await expect(page.getByRole('img')).toBeVisible();
+
+    const loaded = await page.getByRole('img').evaluate((node: HTMLImageElement) => node.naturalWidth);
+
+    expect(loaded).toBe(1200);
   }
 });

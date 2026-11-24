@@ -1,6 +1,7 @@
 import type { Routes } from '@angular/router';
 
 import { anonymousGuard, enrollmentGuard, entryGuard, fullGuard, unverifiedGuard } from './auth/session/navigation';
+import { welcomeGuard } from './onboarding/welcome-entry';
 
 export const appRoutes: Routes = [
   {
@@ -119,6 +120,11 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./db/example/cloud/cloud-example').then((m) => m.CloudExample),
       },
       { path: 'home', loadComponent: () => import('./home/home').then((m) => m.Home) },
+      {
+        path: 'welcome',
+        canActivate: [welcomeGuard],
+        loadComponent: () => import('./onboarding/welcome/welcome').then((m) => m.Welcome),
+      },
       {
         path: 'db-example',
         loadComponent: () => import('./db/example/example').then((m) => m.DatabaseExampleRoute),

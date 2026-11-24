@@ -1,0 +1,450 @@
+---
+import { browserPrivacyCopy } from '@visomi-stack/web-shared-observability';
+
+import MarketingLayout from '../../layouts/marketing.astro';
+import Disclosure from '../disclosure.astro';
+import Heading from '../heading.astro';
+import Link from '../link.astro';
+import LinkButton from '../link-button.astro';
+import Text from '../text.astro';
+import ThemeSwitcher from '../theme-switcher.astro';
+import { applicationPath, siteCopy, sitePath, type SiteLocale } from '../../content/site';
+import { getMarketingCopy } from '../../content/marketing-copy';
+import { getSiteContent } from '../../content/site-content';
+import BrandMark from './marketing-mark.astro';
+import BudgetPreview from './budget-preview.astro';
+import LocaleSwitcher from './locale-switcher.astro';
+
+type Props = { locale: SiteLocale };
+const { locale } = Astro.props;
+const hero = getSiteContent(locale);
+const copy = getMarketingCopy(locale);
+const sectionIds = ['your-money', 'how-it-works', 'privacy'];
+const labels = siteCopy[locale];
+const appUrl = applicationPath(locale);
+const startUrl = appUrl + 'auth/sign-up';
+const helpUrl = sitePath(locale, 'help');
+---
+
+<MarketingLayout locale={locale} page="home" title={hero.title} description={hero.description}>
+  <Link
+    href="#main"
+    underline="none"
+    class="marketing-link sr-only fixed top-3 left-3 z-50 rounded-full bg-surface px-5 py-3 text-ink focus:not-sr-only"
+  >
+    {copy.skip}
+  </Link>
+
+  <header class="relative z-20 bg-canvas" data-site-header>
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-5 max-[359px]:gap-2 md:px-10">
+      <Link
+        href={sitePath(locale, 'home')}
+        underline="none"
+        class="marketing-link flex shrink-0 items-center gap-2 rounded-lg font-heading text-xl font-bold tracking-tight sm:text-2xl"
+        aria-label={'Nive — ' + copy.home}
+      >
+        <BrandMark />
+
+        <span class="max-[359px]:hidden">Nive</span>
+      </Link>
+
+      <nav class="hidden items-center gap-7 text-sm font-semibold text-muted lg:flex" aria-label={copy.navigationLabel}>
+        {copy.navigation.map((label, index) => (
+          <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-nav-link marketing-muted">
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      <div class="flex items-center gap-2 max-[359px]:gap-1 sm:gap-3">
+        <LocaleSwitcher locale={locale} />
+
+        <ThemeSwitcher label={labels.themeToggle} />
+
+        <Link
+          href={appUrl + 'auth/sign-in'}
+          underline="none"
+          class="marketing-link hidden rounded-full px-3 py-3 text-sm font-semibold sm:inline-flex"
+        >
+          {copy.signIn}
+        </Link>
+
+        <LinkButton
+          href={startUrl}
+          size="sm"
+          class="marketing-cta px-4 py-3 transition hover:opacity-80 max-[359px]:px-3 sm:px-5"
+        >
+          {copy.start}
+
+          <span class="hidden sm:inline" aria-hidden="true">
+            ↗
+          </span>
+        </LinkButton>
+      </div>
+    </div>
+
+    <nav
+      class="mx-auto flex justify-center gap-6 px-5 pb-4 text-xs font-semibold text-muted lg:hidden"
+      aria-label={copy.navigationLabel}
+    >
+      {copy.navigation.map((label, index) => (
+        <Link href={`#${sectionIds[index]}`} underline="none" class="marketing-muted">
+          {label}
+        </Link>
+      ))}
+    </nav>
+  </header>
+
+  <main id="main" tabindex="-1" class="overflow-hidden text-ink focus:outline-none">
+    <section class="mx-auto grid max-w-7xl items-center gap-12 px-5 pt-9 pb-14 md:px-10 md:pt-12 md:pb-20 lg:min-h-[min(620px,calc(100svh-92px))] lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-10">
+      <div class="reveal-up">
+        <Text ui-size="xs" tone="inherit" class="marketing-eyebrow tracking-[0.13em]">
+          {hero.eyebrow}
+        </Text>
+
+        <Heading as="h1" ui-size="hero" tone="inherit" class="marketing-hero-title mt-5 max-w-2xl">
+          {hero.title}
+        </Heading>
+
+        <Text ui-size="md" tone="inherit" class="marketing-copy marketing-muted mt-6 max-w-lg md:text-lg md:leading-8">
+          {hero.hero}
+        </Text>
+
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6" data-cta-group>
+          <LinkButton
+            href={startUrl}
+            size="sm"
+            class="marketing-cta min-h-12 gap-5 px-7 py-4 font-bold! transition hover:opacity-85 motion-safe:hover:-translate-y-0.5"
+          >
+            {copy.start}
+
+            <span aria-hidden="true">↗</span>
+          </LinkButton>
+
+          <Link
+            href="#how-it-works"
+            underline="none"
+            class="marketing-link inline-flex min-h-11 items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold"
+          >
+            {copy.explore}
+
+            <span aria-hidden="true">↓</span>
+          </Link>
+        </div>
+
+        <Text ui-size="xs" tone="inherit" class="marketing-copy marketing-muted mt-5">
+          {copy.heroNote + ' ' + copy.availability}
+        </Text>
+      </div>
+
+      <div class="reveal-up relative isolate px-2 sm:px-5 lg:px-0">
+        <BudgetPreview copy={copy.preview} />
+      </div>
+    </section>
+
+    <section id="your-money" class="scroll-mt-8 bg-surface px-5 py-16 md:px-10 md:py-24">
+      <div class="mx-auto max-w-7xl">
+        <div class="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <Text ui-size="xs" tone="inherit" class="marketing-eyebrow tracking-widest">
+              {copy.product.eyebrow}
+            </Text>
+
+            <Heading
+              as="h2"
+              ui-size="section"
+              tone="inherit"
+              class="marketing-heading marketing-section-title mt-4 max-w-xl"
+            >
+              {copy.product.title}
+            </Heading>
+          </div>
+
+          <Text ui-size="md" tone="inherit" class="marketing-copy marketing-muted max-w-md">
+            {copy.product.body}
+          </Text>
+        </div>
+
+        <div class="mt-10 grid gap-5 md:grid-cols-3">
+          {copy.product.cards.map((card, index) => (
+            <article class="flex flex-col rounded-[1.75rem] bg-canvas p-6 lg:p-8">
+              <div class="mb-8 flex h-40 items-center justify-center rounded-2xl bg-raised" aria-hidden="true">
+                {index === 0 ? (
+                  <div class="relative w-36 rotate-[-6deg] rounded-xl bg-surface p-5 shadow-sm">
+                    <Text ui-size="xs" tone="inherit" class="marketing-short-text marketing-brand font-bold">
+                      CSV + CFDI
+                    </Text>
+
+                    <div class="mt-4 h-2 w-20 rounded-full bg-raised"></div>
+
+                    <div class="mt-2 h-2 w-24 rounded-full bg-raised"></div>
+
+                    <div class="mt-2 h-2 w-16 rounded-full bg-raised"></div>
+
+                    <span class="absolute -right-3 -bottom-3 flex size-10 items-center justify-center rounded-full bg-accent text-zinc-950">
+                      ✓
+                    </span>
+                  </div>
+                ) : index === 1 ? (
+                  <div class="flex size-28 items-center justify-center rounded-full border-[14px] border-feature border-r-accent bg-surface font-heading text-3xl font-semibold text-ink">
+                    ↗
+                  </div>
+                ) : (
+                  <div class="grid w-40 gap-3 rounded-2xl bg-surface p-5 shadow-sm">
+                    {['w-[72px]', 'w-[52px]', 'w-[88px]'].map((width) => (
+                      <div class="flex items-center gap-3">
+                        <span class="flex size-5 items-center justify-center rounded-full bg-accent text-xs text-zinc-950">
+                          ✓
+                        </span>
+
+                        <span class:list={['h-2 rounded-full bg-raised', width]}></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Text ui-size="xs" tone="inherit" weight="semibold" class="marketing-short-text marketing-brand">
+                {card.tag}
+              </Text>
+
+              <Heading as="h3" ui-size="lg" tone="inherit" class="marketing-heading mt-3 leading-tight sm:text-2xl!">
+                {card.title}
+              </Heading>
+
+              <Text ui-size="sm" tone="inherit" leading="relaxed" class="marketing-copy marketing-muted mt-4">
+                {card.body}
+              </Text>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="mx-auto max-w-7xl scroll-mt-8 px-5 py-16 md:px-10 md:py-24">
+      <div class="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-24">
+        <div>
+          <Text ui-size="xs" tone="inherit" class="marketing-eyebrow tracking-widest">
+            {copy.steps.eyebrow}
+          </Text>
+
+          <Heading as="h2" ui-size="section" tone="inherit" class="marketing-heading marketing-section-title mt-4">
+            {copy.steps.title}
+          </Heading>
+        </div>
+
+        <ol class="grid gap-8">
+          {copy.steps.items.map((step, index) => (
+            <li class="flex gap-5">
+              <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface font-heading text-sm font-bold text-brand">
+                0{index + 1}
+              </span>
+
+              <div>
+                <Heading as="h3" ui-size="md" tone="inherit" class="marketing-heading">
+                  {step.title}
+                </Heading>
+
+                <Text ui-size="md" tone="inherit" class="marketing-copy marketing-muted mt-2">
+                  {step.body}
+                </Text>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section
+      id="privacy"
+      aria-labelledby="privacy-title"
+      class="marketing-privacy scroll-mt-8 bg-feature px-5 py-16 text-white md:px-10 md:py-24"
+    >
+      <div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-24">
+        <div>
+          <Text ui-size="xs" tone="inherit" class="marketing-eyebrow marketing-accent tracking-widest">
+            {copy.privacy.eyebrow}
+          </Text>
+
+          <Heading
+            as="h2"
+            ui-size="display"
+            tone="inherit"
+            id="privacy-title"
+            class="marketing-heading marketing-privacy-title mt-5 whitespace-pre-line"
+          >
+            {copy.privacy.title}
+          </Heading>
+
+          <Text
+            ui-size="md"
+            tone="inherit"
+            leading="relaxed"
+            class="marketing-copy marketing-feature-copy mt-6 max-w-lg"
+          >
+            {copy.privacy.body}
+          </Text>
+        </div>
+
+        <div class="rounded-[1.75rem] bg-white/10 p-7 md:p-10">
+          <span
+            class="flex size-14 items-center justify-center rounded-2xl bg-accent text-2xl text-zinc-950"
+            aria-hidden="true"
+          >
+            ⌘
+          </span>
+
+          <Heading as="h3" ui-size="lg" tone="inherit" class="marketing-heading mt-7 sm:text-2xl!">
+            {copy.privacy.recovery}
+          </Heading>
+
+          <Text ui-size="md" tone="inherit" class="marketing-copy marketing-feature-copy mt-4">
+            {copy.privacy.recoveryBody}
+          </Text>
+
+          <Link
+            href={helpUrl}
+            variant="inverse"
+            class="marketing-accent mt-7 inline-flex items-center gap-3 text-sm font-semibold"
+          >
+            {copy.privacy.link}
+
+            <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 md:px-10 md:py-24 lg:grid-cols-2 lg:gap-24">
+      <div
+        class="relative flex min-h-72 items-center justify-center overflow-hidden rounded-[2rem] bg-raised p-8 md:min-h-96"
+        aria-hidden="true"
+      >
+        <div class="absolute size-60 rounded-full border border-brand/15 md:size-80"></div>
+
+        <div class="absolute size-40 rounded-full border border-brand/20 md:size-56"></div>
+
+        <div class="relative flex items-center -space-x-4">
+          <span class="flex size-24 items-center justify-center rounded-full border-4 border-raised bg-feature font-heading text-3xl text-white">
+            A
+          </span>
+
+          <span class="flex size-28 items-center justify-center rounded-full border-4 border-raised bg-accent font-heading text-4xl text-zinc-950">
+            N
+          </span>
+
+          <span class="flex size-24 items-center justify-center rounded-full border-4 border-raised bg-brand font-heading text-3xl text-surface">
+            M
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <Text ui-size="xs" tone="inherit" class="marketing-eyebrow tracking-widest">
+          {copy.family.eyebrow}
+        </Text>
+
+        <Heading as="h2" ui-size="section" tone="inherit" class="marketing-heading marketing-section-title mt-4">
+          {copy.family.title}
+        </Heading>
+
+        <Text ui-size="md" tone="inherit" class="marketing-copy marketing-muted mt-5">
+          {copy.family.body}
+        </Text>
+
+        <ul class="mt-7 grid gap-4">
+          {copy.family.points.map((point) => (
+            <li class="flex items-start gap-3 text-sm font-semibold">
+              <span class="text-brand" aria-hidden="true">
+                ✓
+              </span>
+
+              {point}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section class="bg-surface px-5 py-16 md:px-10 md:py-24">
+      <div class="mx-auto max-w-3xl">
+        <Heading as="h2" ui-size="section" tone="inherit" class="marketing-heading marketing-faq-title">
+          {copy.faq.title}
+        </Heading>
+
+        <div class="mt-8">
+          {copy.faq.items.map((item) => (
+            <Disclosure summary={item.question} class="marketing-faq py-2">
+              <Text ui-size="sm" tone="inherit" leading="relaxed" class="marketing-copy marketing-muted max-w-2xl pl-4">
+                {item.answer}
+              </Text>
+            </Disclosure>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-5 py-12 md:px-10 md:py-16">
+      <div class="mx-auto max-w-7xl rounded-[2rem] bg-accent px-6 py-14 text-center text-zinc-950 md:px-12 md:py-20">
+        <Heading
+          as="h2"
+          ui-size="display"
+          tone="inherit"
+          class="marketing-heading marketing-closing-title whitespace-pre-line"
+        >
+          {copy.closing.title}
+        </Heading>
+
+        <Text ui-size="md" tone="inherit" class="marketing-copy mt-5">
+          {copy.closing.body}
+        </Text>
+
+        <LinkButton
+          href={startUrl}
+          size="sm"
+          class="marketing-cta marketing-cta-accent mt-7 min-h-12 gap-6 px-7 py-4 font-bold! transition"
+        >
+          {copy.start}
+
+          <span aria-hidden="true">↗</span>
+        </LinkButton>
+      </div>
+    </section>
+  </main>
+
+  <footer slot="footer" class="mx-auto max-w-7xl px-5 pt-5 pb-10 text-sm md:px-10">
+    <div class="flex flex-col justify-between gap-6 border-b border-ink/10 pb-8 sm:flex-row sm:items-center">
+      <div class="flex items-center gap-3">
+        <BrandMark />
+
+        <span class="font-heading text-xl font-bold tracking-tight">Nive</span>
+      </div>
+
+      <Text ui-size="inherit" tone="inherit" class="marketing-copy marketing-muted">
+        {copy.footer.line}
+      </Text>
+
+      <nav aria-label={labels.footerExplore} class="flex flex-wrap gap-x-5 gap-y-3 font-semibold">
+        <Link href={helpUrl} class="marketing-link">
+          {copy.footer.help}
+        </Link>
+
+        <Link href={sitePath(locale, 'docs')} class="marketing-link">
+          {labels.nav.docs}
+        </Link>
+
+        <Link href={'/' + locale + '/privacy/'} class="marketing-link">
+          {browserPrivacyCopy[locale].privacy}
+        </Link>
+      </nav>
+    </div>
+
+    <div class="mt-6 flex flex-col justify-between gap-3 text-xs leading-5 text-muted sm:flex-row">
+      <span>Nive · Visomi</span>
+
+      <Text ui-size="xs" tone="inherit" class="marketing-copy max-w-xl">
+        {copy.footer.note}
+      </Text>
+    </div>
+  </footer>
+</MarketingLayout>

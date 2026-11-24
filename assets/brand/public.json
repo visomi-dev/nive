@@ -1,5 +1,5 @@
 {
-  "emailLogo": "email/v1/nive.png",
-  "bimiLogo": "bimi/v1/nive.svg",
-  "files": ["email/v1/nive.png", "bimi/v1/nive.svg"]
+  "emailLogo": "email/v2/nive.png",
+  "bimiLogo": "bimi/v2/nive.svg",
+  "files": ["email/v1/nive.png", "bimi/v1/nive.svg", "email/v2/nive.png", "bimi/v2/nive.svg"]
 }

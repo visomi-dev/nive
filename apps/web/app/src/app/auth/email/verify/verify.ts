@@ -60,11 +60,12 @@ export class EmailVerify {
 
     void this.action.run(
       async () => {
-        await this.email.verify(pending.flowId, code);
+        const verified = await this.email.verify(pending.flowId, code);
+        const newPersonalAccount = this.journey.verifiedSignupAccount(verified);
 
         this.journey.clear();
 
-        await this.navigation.complete();
+        await this.navigation.complete(undefined, newPersonalAccount);
       },
       { name: 'verify' },
     );

@@ -1,0 +1,82 @@
+---
+import { getHelpCopy } from '../../content/help-copy';
+import { applicationPath, siteCopy, sitePath, type SiteLocale } from '../../content/site';
+import MarketingLayout from '../../layouts/marketing.astro';
+import Heading from '../heading.astro';
+import Link from '../link.astro';
+import LinkButton from '../link-button.astro';
+import Text from '../text.astro';
+import ThemeSwitcher from '../theme-switcher.astro';
+import BrandMark from './marketing-mark.astro';
+
+type Props = { locale: SiteLocale };
+const { locale } = Astro.props;
+const copy = getHelpCopy(locale);
+---
+
+<MarketingLayout locale={locale} page="help" title={copy.title} description={copy.description}>
+  <header class="px-5 py-5 md:px-10">
+    <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 max-[359px]:gap-2" aria-label={copy.back}>
+      <Link
+        href={sitePath(locale, 'home')}
+        underline="none"
+        aria-label={`Nive — ${copy.home}`}
+        class="marketing-link flex items-center gap-3 rounded-lg font-heading text-2xl font-bold tracking-tight"
+      >
+        <BrandMark />
+
+        <span>Nive</span>
+      </Link>
+
+      <div class="flex min-w-0 items-center gap-3">
+        <ThemeSwitcher label={siteCopy[locale].themeToggle} />
+
+        <LinkButton
+          href={applicationPath(locale)}
+          size="sm"
+          class="marketing-cta px-5 py-3 text-center max-[359px]:px-3"
+        >
+          {copy.open}
+        </LinkButton>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" class="px-5 py-10 text-ink md:px-10 md:py-16">
+    <div class="mx-auto max-w-4xl">
+      <Link href={sitePath(locale, 'home')} underline="none" class="marketing-brand text-sm font-semibold">
+        ← {copy.back}
+      </Link>
+
+      <Heading as="h1" ui-size="display" tone="inherit" class="marketing-heading marketing-help-title mt-8">
+        {copy.title}
+      </Heading>
+
+      <Text ui-size="lg" tone="inherit" class="marketing-copy marketing-muted mt-6 max-w-2xl">
+        {copy.description}
+      </Text>
+
+      <Text ui-size="sm" tone="inherit" leading="relaxed" class="marketing-copy marketing-muted mt-4 max-w-2xl">
+        {copy.availability}
+      </Text>
+
+      <ol class="mt-12 grid gap-4">
+        {copy.topics.map((topic, index) => (
+          <li class="flex gap-5 rounded-panel bg-surface p-6 md:p-8">
+            <span class="pt-1 text-sm font-bold text-brand">0{index + 1}</span>
+
+            <div class="min-w-0">
+              <Heading ui-size="md" tone="inherit" class="marketing-heading md:text-2xl">
+                {topic.title}
+              </Heading>
+
+              <Text tone="inherit" class="marketing-copy marketing-muted mt-3">
+                {topic.body}
+              </Text>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </main>
+</MarketingLayout>

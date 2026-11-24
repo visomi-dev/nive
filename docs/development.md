@@ -86,7 +86,7 @@ pnpm nx build web-gateway
 
 Serving watches the gateway source and builds its application dependencies first.
 The gateway mounts the compiled API at `/api`, the Angular SSR application under
-`/app`, and the Astro website at `/`. The website root redirects to `/en/`; localized
+`/app`, and the Astro website at `/`. The website root redirects to `/es/`; localized
 pages are available at `/en/` and `/es/`. Angular entry routes are `/app/en/` and
 `/app/es/`. Rebuild a mounted application after changing its source, then restart
 the gateway to load the new artifact.
@@ -190,9 +190,23 @@ The existing `serve` targets remain available for working on one application.
 Stop a host development process first, then use the explicit development overlay:
 
 ```sh
-podman compose -f compose.yaml -f compose.dev.yaml up -d --build
+podman compose -f compose.yaml -f compose.dev.yaml up -d --build app mailpit
 podman compose -f compose.yaml -f compose.dev.yaml logs -f app
 ```
+
+To test email verification, add these settings to the private root `.env`
+before starting Compose:
+
+```dotenv
+SMTP_HOST=127.0.0.1
+SMTP_PORT=1025
+SMTP_FROM=Nive <auth@nive.example.test>
+SMTP_ALLOW_INSECURE_LOCAL=true
+```
+
+Register with a synthetic address such as `signup@example.test` and find the
+code in the Mailpit inbox at <http://localhost:18025/>. Use `MAILPIT_PORT` to
+change the loopback port when running multiple checkouts.
 
 The same supervisor runs inside the development image. The checkout is
 bind-mounted as a directory, including atomic editor saves, while `node_modules`,

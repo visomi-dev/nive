@@ -1782,6 +1782,46 @@
         <source>You don’t have any Cloud workspaces yet.</source>
         <target>Aún no tienes espacios de trabajo en la nube.</target>
       </trans-unit>
+      <trans-unit id="firstUseTitle" datatype="html">
+        <source>What would you like to organize first?</source>
+        <target>¿Qué quieres organizar primero?</target>
+      </trans-unit>
+      <trans-unit id="firstUseIntroduction" datatype="html">
+        <source>Welcome to Nive. You can get started on your own.</source>
+        <target>Te damos la bienvenida a Nive. Puedes empezar por tu cuenta.</target>
+      </trans-unit>
+      <trans-unit id="firstUseContinue" datatype="html">
+        <source>Continue to Nive</source>
+        <target>Continuar a Nive</target>
+      </trans-unit>
+      <trans-unit id="firstUseExampleTitle" datatype="html">
+        <source>Explore an example</source>
+        <target>Explora un ejemplo</target>
+      </trans-unit>
+      <trans-unit id="firstUseExampleDescription" datatype="html">
+        <source>See how the dashboard looks with sample data.</source>
+        <target>Conoce el panel con datos de ejemplo.</target>
+      </trans-unit>
+      <trans-unit id="firstUseOpenExample" datatype="html">
+        <source>Open example dashboard</source>
+        <target>Abrir panel de ejemplo</target>
+      </trans-unit>
+      <trans-unit id="firstUseBudgetTitle" datatype="html">
+        <source>Plan your first budget</source>
+        <target>Planea tu primer presupuesto</target>
+      </trans-unit>
+      <trans-unit id="firstUseBudgetDescription" datatype="html">
+        <source>A budget helps plan your income and expenses. Creating a budget is not available yet.</source>
+        <target>Un presupuesto te ayuda a planear tus ingresos y gastos. Crear uno todavía no está disponible.</target>
+      </trans-unit>
+      <trans-unit id="firstUseImportTitle" datatype="html">
+        <source>Bring in your records</source>
+        <target>Usa tus registros</target>
+      </trans-unit>
+      <trans-unit id="firstUseImportDescription" datatype="html">
+        <source>Start with records you already have when import becomes available.</source>
+        <target>Cuando la importación esté disponible, podrás empezar con los registros que ya tienes.</target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

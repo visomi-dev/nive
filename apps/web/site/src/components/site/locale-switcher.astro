@@ -1,0 +1,45 @@
+---
+import { siteCopy, sitePath, type SiteLocale } from '../../content/site';
+import Link from '../link.astro';
+
+type Props = { locale: SiteLocale };
+const { locale } = Astro.props;
+const options = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+] as const;
+const optionClasses = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg';
+---
+
+<nav class="flex items-center text-xs font-bold text-muted" aria-label={siteCopy[locale].language}>
+  {options.map(({ code, name }, index) => (
+    <>
+      {index > 0 && (
+        <span aria-hidden="true" class="opacity-30">
+          /
+        </span>
+      )}
+
+      {code === locale ? (
+        <span class:list={[optionClasses, 'text-ink']} lang={code} aria-current="true" data-current-language>
+          <span aria-hidden="true">{code.toUpperCase()}</span>
+
+          <span class="sr-only">{name}</span>
+        </span>
+      ) : (
+        <Link
+          href={sitePath(code, 'home') + Astro.url.search}
+          underline="none"
+          class={optionClasses + ' marketing-muted marketing-language-link'}
+          hreflang={code}
+          lang={code}
+          rel="alternate"
+          aria-label={name}
+          data-language-switcher
+        >
+          {code.toUpperCase()}
+        </Link>
+      )}
+    </>
+  ))}
+</nav>

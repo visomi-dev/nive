@@ -73,12 +73,16 @@ export class PasswordCredentials {
             const { email, password } = this.model();
 
             try {
-              const operation = this.signup
-                ? this.passwords.signup(email, password)
-                : this.passwords.signin(email, password);
-              const pending = await operation;
+              if (this.signup) {
+                const registration = await this.passwords.signup(email, password);
 
-              this.journey.start(this.signup ? 'email' : 'password', pending);
+                this.journey.recordSignup(registration);
+                this.journey.start('email', { flowId: registration.flowId, expiresAt: registration.expiresAt });
+              } else {
+                const pending = await this.passwords.signin(email, password);
+
+                this.journey.start('password', pending);
+              }
 
               await this.router.navigate([this.signup ? '/auth/verify-email' : '/auth/sign-in/verify'], {
                 queryParams: this.navigation.returnQuery(),
