@@ -59,10 +59,9 @@ failed verification, failed jobs, and cancelled jobs fail the gate. A docs-only
 change can therefore pass without building unrelated applications. Do not add
 workflow-level path filters that prevent this required status from being reported.
 
-The active `required-ci` repository ruleset requires the `required` status from
-GitHub Actions and an up-to-date branch before merge. It supplements the existing
-`main` ruleset without replacing its security, coverage, or review rules.
-The workflow cancels superseded PR runs, but never cancels `main` runs.
+The `required` status from GitHub Actions is the merge gate for `main`. Verify
+that the repository ruleset enforces it before relying on branch protection.
+The workflow cancels superseded PR runs and lets every `main` run finish.
 
 ### Inputs and selection regression checks
 
@@ -121,9 +120,9 @@ introduced when there is a shared transport or private trace storage
 requirement. Browser telemetry retains the existing consent policy.
 
 1. Confirm the exact GitHub `main` SHA has a successful CI run with a successful
-   `required` job. Confirm Railway's GitHub installation can access the
-   repository and its check suites. The gateway source uses `main` with
-   **Wait for CI**.
+   `required` job. Investigate missing push runs before enabling automatic
+   deployment. Confirm Railway's GitHub installation can access the repository
+   and its check suites. The gateway source uses `main` with **Wait for CI**.
 2. Install workspace dependencies with `pnpm install --frozen-lockfile` and link
    the Nive production environment. Use Railway CLI 5.74 or later. Save the
    redacted plan for review, keeping the JSON artifact in a private directory
@@ -139,15 +138,18 @@ requirement. Browser telemetry retains the existing consent policy.
    `railway config apply --plan "$nive_plan_dir/plan.json" --yes`. Replan and
    review again if the target or source changed. Railway creates the
    database password and session secret from generators. Manage any optional
-   SMTP or Google credentials in Railway variables. Keep database connections
-   on the private network and confirm PostgreSQL has no public TCP proxy.
+   SMTP or Google credentials in Railway variables. Outbound SMTP needs
+   [Railway Pro or above](https://docs.railway.com/networking/outbound-networking#email-delivery).
+   Keep database connections on the private network and confirm PostgreSQL has
+   no public TCP proxy.
 4. Railway's IaC planner does not register a new custom domain. After the
    gateway exists, register it once with
    `railway domain nive.visomi.dev --port 8080 --service web-gateway`.
    Use the returned DNS records to update only the Nive hostname. Publish the
    CNAME in DNS-only mode and add the Railway verification TXT record. Wait
    for ownership verification and the HTTPS certificate. Keep this hostname
-   aligned with both the auth settings and the build origin in the IaC.
+   aligned with the auth settings, Angular SSR allowlist and build origin in
+   the IaC.
 5. Confirm the gateway deployment SHA and health check at `/api/`. Railway
    runs `node libs/backend/db/tools/migrate.mjs` in a separate pre-deploy
    container using the final image and private database connection. If the

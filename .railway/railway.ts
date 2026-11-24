@@ -12,7 +12,9 @@ export default defineRailway((context) => {
   const databaseVolume = volume('postgres-volume', { sizeMB: 1024 });
   // The postgres() preset also provisions a public TCP proxy.
   const appDatabase = service('Postgres', {
-    source: image('docker.io/library/postgres:16-alpine'),
+    source: image(
+      'docker.io/library/postgres:16-alpine@sha256:866efe7070b471f3a5397edac0e5edd65c23ff056587c6e47c07d008caaedd28',
+    ),
     volumeMounts: { [postgresMount]: databaseVolume },
     deploy: { requiredMountPath: postgresMount },
     env: {
@@ -44,6 +46,7 @@ export default defineRailway((context) => {
       DATABASE_URL: appDatabase.env.DATABASE_URL,
       AUTH_ORIGIN: publicOrigin,
       AUTH_RP_ID: publicHost,
+      NG_ALLOWED_HOSTS: publicHost,
       NIVE_PUBLIC_ORIGIN: publicOrigin,
       SESSION_SECRET: { generator: 'secret(64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")' },
       // One Railway HTTP ingress and only trusted private-network callers.
