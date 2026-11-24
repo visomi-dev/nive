@@ -42,7 +42,7 @@ const englishMarketingCopy: MarketingCopy = {
   preview: {
     label: 'Illustrative example · MXN',
     space: 'My space',
-    period: 'This month',
+    period: 'This budget period',
     remaining: 'Left in the plan',
     planned: 'Planned',
     spent: 'Spent',

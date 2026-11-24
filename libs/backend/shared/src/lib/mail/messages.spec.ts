@@ -31,7 +31,7 @@ describe('shared authentication mail', () => {
     expect(message.html).not.toContain('<script>');
     expect(message.html).toContain('&lt;script&gt;');
     expect(message.text).toContain('123456');
-    expect(message.html).toContain('https://app.example.test/static/brand/email/v1/nive.png');
+    expect(message.html).toContain('https://app.example.test/static/brand/email/v2/nive.png');
     expect(message.html).toContain('alt="Nive"');
     expect(message.html).not.toContain('{{');
     expect(message.text).not.toContain('/static/');

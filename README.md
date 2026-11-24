@@ -1,5 +1,8 @@
 # Nive
 
+Nive is short for Nirvana Economics and helps you see which payments are covered, how much is left and what carries into the next budget period.
+Read the [product vision](docs/product/vision.md) to see how one budget period informs the next and what works today.
+
 Nive is a web workspace for personal finances. This initial release introduces its
 website, account access, and the application shell in English and Spanish.
 It combines Screaming Architecture with Domain-Driven Design: business domains

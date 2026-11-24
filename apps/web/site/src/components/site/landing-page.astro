@@ -40,15 +40,12 @@ const helpUrl = sitePath(locale, 'help');
       <Link
         href={sitePath(locale, 'home')}
         underline="none"
-        class="marketing-link flex shrink-0 items-center gap-2 rounded-lg font-heading text-xl font-extrabold tracking-tight sm:text-2xl"
+        class="marketing-link flex shrink-0 items-center gap-2 rounded-lg font-heading text-xl font-bold tracking-tight sm:text-2xl"
         aria-label={'Nive — ' + copy.home}
       >
         <BrandMark />
 
-        <span class="max-[359px]:hidden">
-          Nive
-          <span class="text-brand">.</span>
-        </span>
+        <span class="max-[359px]:hidden">Nive</span>
       </Link>
 
       <nav class="hidden items-center gap-7 text-sm font-semibold text-muted lg:flex" aria-label={copy.navigationLabel}>

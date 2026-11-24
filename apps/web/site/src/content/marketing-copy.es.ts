@@ -13,7 +13,7 @@ export const spanishMarketingCopy: MarketingCopy = {
   preview: {
     label: 'Ejemplo ilustrativo · MXN',
     space: 'Mi espacio',
-    period: 'Este mes',
+    period: 'Este periodo',
     remaining: 'Por gastar del presupuesto',
     planned: 'Planeado',
     spent: 'Gastado',

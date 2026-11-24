@@ -1,3 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <path fill="#14201b" fill-rule="evenodd" d="M13 0h22a13 13 0 0 1 13 13v22a13 13 0 0 1-13 13H13A13 13 0 0 1 0 35V13A13 13 0 0 1 13 0Zm2.75 34V19.9l16.8 14.35a2.25 2.25 0 0 0 3.7-1.75v-20a2.25 2.25 0 0 0-4.5 0v15.1L14.95 13.25A2.25 2.25 0 0 0 11.25 15v19a2.25 2.25 0 0 0 4.5 0Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <mask id="margen" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+      <rect width="48" height="48" fill="#fff"/>
+      <g fill="#000" transform="translate(1.92 1.92) scale(0.92)">
+        <path d="M10 10h13v7H12a3 3 0 0 0-3 3v5H3v-8a7 7 0 0 1 7-7Zm28 28H25v-7h11a3 3 0 0 0 3-3v-5h6v8a7 7 0 0 1-7 7Z"/>
+        <rect x="12" y="20.5" width="24" height="7" rx="3.5"/>
+      </g>
+    </mask>
+  </defs>
+  <rect width="48" height="48" rx="12.5" fill="#14201b" mask="url(#margen)"/>
 </svg>
