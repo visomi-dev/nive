@@ -1,0 +1,50 @@
+---
+import BaseLayout from './base.astro';
+import BrowserPrivacy from '../components/site/browser-privacy.astro';
+import ConsentNotice from '../components/site/consent-notice.astro';
+import { sitePath, type SiteLocale } from '../content/site';
+import { getSiteContent } from '../content/site-content';
+
+type Props = { locale: SiteLocale; page: 'home' | 'help'; title: string; description: string };
+const { locale, page, title, description } = Astro.props;
+const origin = Astro.site ?? Astro.url.origin;
+const canonical = new URL(sitePath(locale, page), origin);
+const image = new URL(`/images/seo/${locale}/home.png`, origin);
+const imageAlt = `Nive: ${getSiteContent(locale).title}`;
+---
+
+<BaseLayout locale={locale} title={title} description={description}>
+  <Fragment slot="head">
+    <link rel="canonical" href={canonical} />
+
+    <link rel="alternate" hreflang="en" href={new URL(sitePath('en', page), origin)} />
+
+    <link rel="alternate" hreflang="es" href={new URL(sitePath('es', page), origin)} />
+
+    <meta property="og:url" content={canonical} />
+
+    <meta property="og:image" content={image} />
+
+    <meta property="og:image:alt" content={imageAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="twitter:title" content={`${title} · Nive`} />
+
+    <meta name="twitter:description" content={description} />
+
+    <meta name="twitter:image" content={image} />
+
+    <meta name="twitter:image:alt" content={imageAlt} />
+  </Fragment>
+
+  <slot />
+
+  <div class="mx-auto max-w-7xl px-5 md:px-10">
+    <ConsentNotice locale={locale} />
+
+    <BrowserPrivacy locale={locale} />
+  </div>
+
+  <slot name="footer" />
+</BaseLayout>

@@ -7,12 +7,12 @@ test.beforeEach(async ({ page }) => {
 for (const locale of ['en', 'es']) {
   for (const theme of ['light', 'dark'] as const) {
     for (const width of [320, 375, 720, 1024, 1280, 1440]) {
-      test(`${locale} language link in ${theme} at ${width}px`, async ({ page }, info) => {
+      test(`${locale} architecture language link in ${theme} at ${width}px`, async ({ page }, info) => {
         await page.setViewportSize({ width, height: 900 });
 
         await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
 
-        await page.goto(`/${locale}/`);
+        await page.goto(`/${locale}/architecture/`);
 
         const header = page.locator('[data-site-header]');
         const language = header.locator('[data-language-switcher]');
@@ -40,7 +40,7 @@ for (const locale of ['en', 'es']) {
 
         await expect(language).toHaveAttribute('hreflang', destination);
 
-        await expect(language).toHaveAttribute('href', `/${destination}/`);
+        await expect(language).toHaveAttribute('href', `/${destination}/architecture/`);
 
         await expect(
           header
@@ -148,7 +148,7 @@ for (const locale of ['en', 'es']) {
 
         await page.keyboard.press('Enter');
 
-        await expect(page).toHaveURL(new RegExp(`/${destination}/$`));
+        await expect(page).toHaveURL(new RegExp(`/${destination}/architecture/$`));
 
         await expect(page.locator('html')).toHaveClass(theme === 'dark' ? 'dark' : '');
       });

@@ -16,7 +16,7 @@ for (const locale of ['en', 'es']) {
           groups.map((group) => {
             const [first, second] = Array.from(group.children).map((element) => element.getBoundingClientRect());
             const parent = group.getBoundingClientRect();
-            const sameRow = Math.abs(first.top - second.top) < 1;
+            const sameRow = Math.abs(first.top + first.height / 2 - (second.top + second.height / 2)) < 1;
 
             return {
               usableTargets: first.height >= 44 && second.height >= 44,

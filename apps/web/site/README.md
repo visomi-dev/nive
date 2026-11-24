@@ -15,8 +15,9 @@ pnpm nx lint web-site
 pnpm nx e2e web-site            # Chromium against the compiled Express gateway
 ```
 
-Public pages live at `/en/` and `/es/`; `/` redirects to English. `/api` and
-`/app` remain reserved at the gateway, including their missing routes.
+The public home and help pages live at `/en/`, `/es/`, `/en/help/` and `/es/help/`.
+`/` redirects to Spanish and the historical `/docs/` route opens the English help page.
+`/api` and `/app` remain reserved at the gateway, including their missing routes.
 Unknown public pages return 404. The site does not implement authentication.
 
 See [Web foundations](../../../docs/web-foundations.md) for shared styles,

@@ -41,12 +41,13 @@ test('shows a localized 404 with the foundations theme and a working way home on
 for (const locale of ['en', 'es']) {
   test(`renders ${locale} through Express and loads assets without errors`, async ({ page, request }, info) => {
     const path = route(locale);
+    const title = locale === 'en' ? 'Life moves. Your money makes sense.' : 'Tus finanzas, más claras. Tu vida cambia.';
     const response = await request.get(path);
     const markup = await response.text();
 
     expect(response.status()).toBe(200);
     expect(markup).toContain(`<html lang="${locale}"`);
-    expect(markup).toContain(locale === 'en' ? 'A little more clarity' : 'Un poco más de claridad');
+    expect(markup).toContain(title);
     const errors: string[] = [];
 
     page.on('pageerror', (error) => errors.push(error.message));
@@ -58,9 +59,7 @@ for (const locale of ['en', 'es']) {
 
     await page.goto(path);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      locale === 'en' ? 'A little more clarity for your money' : 'Un poco más de claridad para tu dinero',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
 
     await page.evaluate(() => document.fonts.ready);
 
@@ -166,7 +165,7 @@ test('supports keyboard focus, reduced motion and a narrow viewport', async ({ p
 
   await page.keyboard.press('Tab');
 
-  await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
+  await expect(page.getByRole('link', { name: 'Ir al contenido' })).toBeFocused();
 
   await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
 
@@ -201,7 +200,7 @@ test('serves readable content with JavaScript disabled', async ({ browser }, inf
 
     await page.goto(route('es'));
 
-    await expect(page.getByRole('heading', { name: 'Un poco más de claridad para tu dinero' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tus finanzas, más claras. Tu vida cambia.' })).toBeVisible();
   } finally {
     await context.close();
   }

@@ -86,7 +86,7 @@ pnpm nx build web-gateway
 
 Serving watches the gateway source and builds its application dependencies first.
 The gateway mounts the compiled API at `/api`, the Angular SSR application under
-`/app`, and the Astro website at `/`. The website root redirects to `/en/`; localized
+`/app`, and the Astro website at `/`. The website root redirects to `/es/`; localized
 pages are available at `/en/` and `/es/`. Angular entry routes are `/app/en/` and
 `/app/es/`. Rebuild a mounted application after changing its source, then restart
 the gateway to load the new artifact.

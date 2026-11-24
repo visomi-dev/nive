@@ -1,69 +1,53 @@
 # Public website
 
-The Astro website introduces Visomi Stack as a modular foundation for developers
-and teams. It explains the product direction and provides a practical local
-foundation. The public pages introduce Nive and its web workspace.
+The Astro website introduces Nive's personal-finance product and provides
+getting-started help. Its architecture and component pages document the
+underlying Visomi Stack workspace.
 
 ## Pages and ownership
 
-Every public page has English and Spanish routes:
+The root redirects to `/es/`. The historical `/docs/` URL serves the English
+getting-started guide, also available at `/en/help/`. Localized routes include:
 
-| Route after `/en/` or `/es/` | Purpose                                                                      |
-| ---------------------------- | ---------------------------------------------------------------------------- |
-| `/`                          | Product introduction, real UI examples, architecture overview, setup and FAQ |
-| `architecture/`              | Current runtime boundaries and the intended platform direction               |
-| `docs/`                      | Pinned prerequisites, local commands, workspace map and next steps           |
-| `foundations/`               | The original typography, color and surface samples                           |
-| `ui/`                        | The complete component catalog and framework usage                           |
-| `ui/shell/`                  | A standalone application-shell example                                       |
+| Route after `/en/` or `/es/` | Purpose                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| `/`                          | Product introduction, illustrative budget, privacy, family spaces and FAQ |
+| `help/`                      | Getting-started guide and current feature availability                    |
+| `architecture/`              | Current runtime boundaries and the intended platform direction            |
+| `docs/`                      | Pinned prerequisites, local commands, workspace map and next steps        |
+| `foundations/`               | The original typography, color and surface samples                        |
+| `ui/`                        | The complete component catalog and framework usage                        |
+| `ui/shell/`                  | A standalone application-shell example                                    |
 
-`src/layouts/site.astro` owns public navigation, skip navigation, one main
-landmark and the footer. It composes the import-safe base document. Marketing
-parts live in `src/components/site/`; existing native UI adapters and shared
-recipes are reused. Text/navigation links use the shared `Link` adapter with
-explicit color and underline variants; their layout stays at the call site. The standalone application-shell and button experiments keep
-their focused demo layouts.
+`src/layouts/site.astro` owns navigation and the footer for the developer pages.
+`src/layouts/marketing.astro` supplies social metadata and the browser privacy
+controls for the product and help pages. Both use the shared base document.
 
-Public content lives in `src/content/en.ts` and `es.ts`. `site.ts` owns the typed
-page identifiers and localized paths, so changing language retains the current
-public page. The mobile menu uses native `details`, and FAQs use the existing
-native disclosure adapter. No client router or extra UI runtime is required.
-Both website and application headers show the current language as selected text
-with `aria-current="true"` and the alternate language as a native link. Full
-native names (`English`, `Español`) follow the
-[GOV.UK language navigation pattern](https://design-system.service.gov.uk/components/language-navigation/).
-Ordinary pages preserve their query and fragment when switching language;
-authentication screens retain their existing safe restart rules.
-The header, mobile menu and footer link to `/app/en/` or `/app/es/` on the same
-origin, preserving the website language when opening the mounted application.
+`src/content/site.ts` owns localized route paths. Landing-page navigation links
+to sections on the page, and FAQs use native `details`. The homepage shows
+`EN` and `ES` with full accessible names. The alternate language uses a native
+link, with query and fragment preservation when available. Registration and
+sign-in links open the mounted application in the same language.
 
 ## Visual and content direction
 
-The design retains zinc/blue, local Inter/Manrope/JetBrains Mono fonts and the
-shared focus treatment. Strong type, readable spacing, a source-native product
-preview and a runtime map make the structure concrete. The preview is labelled
-as an example and links to the real shell catalog. No usage metrics, testimonials
-or unsupported production security claims are invented.
+The product pages use the original Nive layout with shared Manrope, color and
+focus styles. The budget preview uses sample amounts in MXN. Both languages
+identify budgeting, imports and family spaces as features still in development.
 
 As agreed, the website also illustrates the broader direction: worker execution,
 realtime delivery and client-protected content. The architecture page identifies
 these as future capabilities and distinguishes them from the current gateway,
 Astro site, gateway-mounted Angular SSR application and identity backend.
 
-Homepage and architecture sections cap vertical padding at 64px per side, with
-smaller spacing on mobile and around short blocks such as FAQ, principles and
-closing actions. Page content determines height; spacing separates groups
-without forcing them to fill a viewport.
-
-The homepage, architecture and getting-started pages load only the TypeScript
-theme-control script compiled by Astro. The component catalog additionally retains its small
-native demo script. Scripts remain external for Express CSP compatibility.
+The product, architecture and getting-started pages load the shared theme and
+browser privacy scripts. The component catalog also loads its native demo script.
+Scripts remain external for Express CSP compatibility.
 Both theme-switcher adapters share CSS keyframes: the incoming icon enters from
 below and the outgoing icon leaves above in either direction. Initial theme
 restoration does not animate, and reduced-motion preferences disable the cycle.
-Metadata contains localized descriptions and Open Graph text. A canonical
-production origin and social preview image are not invented before deployment
-configuration is decided.
+The product and help pages use the configured public origin for canonical URLs
+and localized social preview images.
 
 ## Development and checks
 

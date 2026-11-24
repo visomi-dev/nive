@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f5f7f6" />
+  <rect x="56" y="52" width="52" height="52" rx="16" fill="#173f30" />
+  <path d="M71 87V68L93 87V68" fill="none" stroke="#d6f5a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <g font-family="DejaVu Sans, sans-serif" fill="#14201b">
+    <text x="122" y="90" font-size="38" font-weight="700">Nive.</text>
+    <text x="56" y="252" font-size="64" font-weight="700">Life moves.</text>
+    <text x="56" y="334" font-size="64" font-weight="700">Your money</text>
+    <text x="56" y="416" font-size="64" font-weight="700">makes sense.</text>
+    <text x="56" y="506" font-size="23" fill="#52665b">A place for your money. Room for your life.</text>
+  </g>
+  <rect x="792" y="96" width="348" height="438" rx="38" fill="#d6f5a0" transform="rotate(4 966 315)" />
+  <rect x="776" y="110" width="348" height="410" rx="32" fill="#173f30" />
+  <g font-family="DejaVu Sans, sans-serif" fill="#ffffff">
+    <text x="812" y="173" font-size="20">My space</text>
+    <text x="812" y="260" font-size="18">Left in the plan</text>
+    <text x="812" y="320" font-size="40" font-weight="700">$8,450.00</text>
+    <text x="812" y="468" font-size="14">Illustrative example · MXN</text>
+  </g>
+  <rect x="812" y="358" width="276" height="8" rx="4" fill="#52665b" />
+  <rect x="812" y="358" width="180" height="8" rx="4" fill="#d6f5a0" />
+</svg>

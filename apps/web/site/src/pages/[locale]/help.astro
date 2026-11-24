@@ -1,0 +1,12 @@
+---
+import HelpPage from '../../components/site/help-page.astro';
+import { isSiteLocale } from '../../content/site';
+
+const { locale } = Astro.params;
+
+if (!isSiteLocale(locale)) {
+  return new Response(null, { status: 404 });
+}
+---
+
+<HelpPage locale={locale} />
