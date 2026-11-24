@@ -289,6 +289,17 @@ test('the legacy English help URL and localized social cards remain available', 
 
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/en\/help\/$/);
 
+  const iconPath = await page.locator('link[rel="icon"]').first().getAttribute('href');
+  const legacyIcon = await request.get('/favicon.svg');
+  const icon = await request.get(iconPath!);
+  const legacySvg = await legacyIcon.text();
+  const sharedSvg = await icon.text();
+
+  expect(legacyIcon.ok()).toBe(true);
+  expect(legacyIcon.headers()['content-type']).toContain('image/svg+xml');
+  expect(sharedSvg).toMatch(/^<svg\b/);
+  expect(legacySvg).toBe(sharedSvg);
+
   for (const locale of ['en', 'es']) {
     await page.goto('/' + locale + '/');
 

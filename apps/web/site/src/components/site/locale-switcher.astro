@@ -1,5 +1,6 @@
 ---
 import { siteCopy, sitePath, type SiteLocale } from '../../content/site';
+import Link from '../link.astro';
 
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
@@ -26,9 +27,10 @@ const optionClasses = 'inline-flex min-h-11 min-w-11 items-center justify-center
           <span class="sr-only">{name}</span>
         </span>
       ) : (
-        <a
+        <Link
           href={sitePath(code, 'home') + Astro.url.search}
-          class:list={[optionClasses, 'ui-focus-ring hover:text-brand']}
+          underline="none"
+          class={optionClasses + ' marketing-link marketing-language-link'}
           hreflang={code}
           lang={code}
           rel="alternate"
@@ -36,7 +38,7 @@ const optionClasses = 'inline-flex min-h-11 min-w-11 items-center justify-center
           data-language-switcher
         >
           {code.toUpperCase()}
-        </a>
+        </Link>
       )}
     </>
   ))}
