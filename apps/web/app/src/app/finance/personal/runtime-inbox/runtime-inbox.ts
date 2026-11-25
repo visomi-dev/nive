@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, output, signal } from '@angular/core';
-import type { Ledger } from '@nive/finance';
+import { capabilities, type Ledger } from '@nive/finance';
 
 import { Button, Card, Heading, Input, Text } from '../../../ui';
 import { ImportReview } from '../import-review/import-review';
@@ -12,7 +12,6 @@ type Reviewed = { before: Ledger; after: Ledger };
 @Component({
   selector: 'app-runtime-inbox',
   imports: [Button, Card, DatePipe, Heading, ImportReview, Input, Text],
-  providers: [Inbox],
   templateUrl: './runtime-inbox.html',
 })
 export class RuntimeInbox {
@@ -33,9 +32,17 @@ export class RuntimeInbox {
     }
   }
 
-  protected authorize(event: Event): void {
+  protected authorize(event: Event, form: HTMLFormElement): void {
+    event.preventDefault();
+
     if (event.isTrusted) {
-      void this.run(() => this.inbox.authorize());
+      void this.run(() => {
+        const grants = this.inbox.enrollment()?.secureControl
+          ? new FormData(form).getAll('capability')
+          : ['prepare-import'];
+
+        return this.inbox.authorize(capabilities.parse(grants));
+      });
     }
   }
 

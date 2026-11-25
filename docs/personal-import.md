@@ -42,9 +42,9 @@ locked vault before continuing.
 
 1. Configure the local `nive` MCP entry in Codex as shown in the [runtime guide](personal-runtime.md).
    Set its `NIVE_WEB_ORIGIN` to `http://localhost:18184` and start a Codex session on the same
-   computer as the Nive tab. Open your vault with a PRF-capable passkey. In **Local import inbox**,
-   enter the one-time code from the private runtime directory, confirm consent and pair. Then
-   click **Authorize inbox for 15 minutes**. You can close the tab during this window. Keep
+   computer as the Nive tab. Open your vault with a PRF-capable passkey. In **Local runtime**,
+   enter the one-time code from the private runtime directory, confirm consent and pair. Select
+   **Prepare import proposals** and click **Authorize for 15 minutes**. You can close the tab during this window. Keep
    Codex and the runtime running. The setup URL holds only the step.
 2. Select the CSV, XML, XLSX and PDF in Codex. In the tested Codex CLI, start in the fixture
    directory, type `@` and select each file from the file picker. This references local files in
@@ -121,9 +121,9 @@ tests use an official SDK client on stdio.
 
 ## Remaining work
 
-The browser holds the financial vault key. The local runtime can receive structured proposals
-in a separate encrypted inbox during an explicitly authorized window. Detached ledger access,
-a standalone financial CLI, cross-device sync, the wider finance domain and the managed-agent
-harness remain separate work. Budget lines in this slice represent monthly expense limits by
+The browser holds the financial vault key. During an explicitly authorized window, the local
+runtime can receive structured proposals or calculate scoped summaries from an encrypted,
+read-only copy. A standalone financial CLI, cross-device sync, the wider finance domain and
+the managed-agent harness remain separate work. Budget lines in this slice represent monthly expense limits by
 account and category. No OCR, bank connection, managed Railway agent or Private Files access was
 part of acceptance.

@@ -2219,12 +2219,12 @@
         <target>Referencia</target>
       </trans-unit>
       <trans-unit id="runtimeInboxTitle" datatype="html">
-        <source>Local import inbox</source>
-        <target>Buzón local de importación</target>
+        <source>Local runtime</source>
+        <target>Runtime local</target>
       </trans-unit>
       <trans-unit id="runtimeInboxScope" datatype="html">
-        <source>Pair the local runtime running on this computer. Codex can submit import proposals when this tab is closed during an active 15-minute authorization. The runtime can access only its encrypted inbox. Review and approve in Nive.</source>
-        <target>Vincula el runtime local que se ejecuta en este equipo. Codex puede enviar propuestas de importación con esta pestaña cerrada mientras esté activa una autorización de 15 minutos. El runtime solo puede acceder a su buzón cifrado. Revisa y aprueba en Nive.</target>
+        <source>Pair the runtime on this computer and choose what it can do for 15 minutes, including when this tab is closed. Review and approve proposals in Nive.</source>
+        <target>Vincula el runtime en este equipo y elige qué puede hacer durante 15 minutos, incluso con esta pestaña cerrada. Revisa y aprueba las propuestas en Nive.</target>
       </trans-unit>
       <trans-unit id="runtimeInboxDevice" datatype="html">
         <source>Installation <x id="INTERPOLATION" equiv-text="{{ enrollment.id }}"/></source>
@@ -2239,12 +2239,12 @@
         <target>La última autorización vence a las <x id="INTERPOLATION" equiv-text="{{ deadline | date: 'shortTime' }}"/>. Puedes cerrar la pestaña y volver para revisar la propuesta.</target>
       </trans-unit>
       <trans-unit id="runtimeInboxLocked" datatype="html">
-        <source>The runtime needs a new authorization to accept proposals.</source>
-        <target>El runtime necesita una nueva autorización para aceptar propuestas.</target>
+        <source>The runtime needs a new authorization to use the selected tools.</source>
+        <target>El runtime necesita una nueva autorización para usar las herramientas seleccionadas.</target>
       </trans-unit>
       <trans-unit id="runtimeInboxAuthorize" datatype="html">
-        <source>Authorize inbox for 15 minutes</source>
-        <target>Autorizar el buzón por 15 minutos</target>
+        <source>Authorize for 15 minutes</source>
+        <target>Autorizar por 15 minutos</target>
       </trans-unit>
       <trans-unit id="runtimeInboxRefresh" datatype="html">
         <source>Check for proposals</source>
@@ -2255,16 +2255,16 @@
         <target>Revocar esta instalación</target>
       </trans-unit>
       <trans-unit id="runtimeInboxCode" datatype="html">
-        <source>Inbox pairing code</source>
-        <target>Código de vinculación del buzón</target>
+        <source>Runtime pairing code</source>
+        <target>Código de vinculación del runtime</target>
       </trans-unit>
       <trans-unit id="runtimeInboxConsent" datatype="html">
-        <source>I trust this installation to receive import proposals. Codex and its provider process the files I select in the chat.</source>
-        <target>Confío en que esta instalación reciba propuestas de importación. Codex y su proveedor procesan los archivos que selecciono en el chat.</target>
+        <source>I trust this installation. Codex and its provider process the files I select in the chat and receive any summaries I request.</source>
+        <target>Confío en esta instalación. Codex y su proveedor procesan los archivos que selecciono en el chat y reciben los resúmenes que solicite.</target>
       </trans-unit>
       <trans-unit id="runtimeInboxPair" datatype="html">
-        <source>Pair import inbox</source>
-        <target>Vincular el buzón de importación</target>
+        <source>Pair local runtime</source>
+        <target>Vincular el runtime local</target>
       </trans-unit>
       <trans-unit id="runtimeInboxReconnect" datatype="html">
         <source>Check paired installation</source>
@@ -2273,6 +2273,30 @@
       <trans-unit id="runtimeInboxError" datatype="html">
         <source>Check the runtime, pairing code, and open vault. Your saved state is kept for retry.</source>
         <target>Comprueba el runtime, el código de vinculación y que la bóveda esté abierta. Puedes volver a intentar con tu estado guardado.</target>
+      </trans-unit>
+      <trans-unit id="runtimeGrantOptions" datatype="html">
+        <source>Tools to authorize</source>
+        <target>Herramientas que puedes autorizar</target>
+      </trans-unit>
+      <trans-unit id="runtimeGrantImport" datatype="html">
+        <source>Prepare import proposals</source>
+        <target>Preparar propuestas de importación</target>
+      </trans-unit>
+      <trans-unit id="runtimeGrantMovement" datatype="html">
+        <source>Prepare individual movement proposals</source>
+        <target>Preparar propuestas de movimientos individuales</target>
+      </trans-unit>
+      <trans-unit id="runtimeGrantSummary" datatype="html">
+        <source>Share account names, balances and monthly totals with Codex from a read-only copy captured now</source>
+        <target>Compartir con Codex nombres de cuentas, saldos y totales mensuales desde una copia de solo lectura creada en este momento</target>
+      </trans-unit>
+      <trans-unit id="runtimeGrantLegacy" datatype="html">
+        <source>This installation can receive imports. To authorize summaries or individual movements, revoke it and pair again with a fresh code.</source>
+        <target>Esta instalación puede recibir importaciones. Para autorizar resúmenes o movimientos individuales, revócala y vuelve a vincularla con un código nuevo.</target>
+      </trans-unit>
+      <trans-unit id="runtimeMovementAccountRequired" datatype="html">
+        <source>Add a source account before reviewing this movement.</source>
+        <target>Agrega una cuenta de origen antes de revisar este movimiento.</target>
       </trans-unit>
     </body>
   </file>

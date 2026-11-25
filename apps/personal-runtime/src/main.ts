@@ -36,7 +36,7 @@ const tools = [
   {
     name: 'nive_financial_summary',
     description:
-      'List personal accounts and balances, plus income and expenses for a selected month by currency. Amounts are exact minor-unit strings.',
+      'List personal accounts and balances, plus income and expenses for a selected month by currency. On an enrolled device, snapshot shows when the read-only copy was captured. Amounts are exact minor-unit strings.',
     inputSchema: z.toJSONSchema(summaryInput),
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
       void rm(path, { force: true }).catch(() => undefined);
     }
   });
-  const { inbox, stop: stopListener } = await startLoopback(broker, origin, () => new RuntimeInbox(directory));
+  const { inbox, stop: stopListener } = await startLoopback(broker, origin, code, () => new RuntimeInbox(directory));
   const temp = join(directory, randomBytes(12).toString('hex'));
 
   try {

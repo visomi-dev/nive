@@ -8,6 +8,7 @@ import { Navigation } from '../../shared/navigation';
 import { LedgerStore } from './ledger-store';
 import { LocalAgent, type ImportProposal } from './local-agent';
 import { PersonalFinance } from './personal';
+import { Inbox } from './runtime-inbox/inbox';
 
 it('keeps the open local importer mounted when an agent batch arrives', async () => {
   const proposal = signal<ImportProposal | null>(null);
@@ -16,6 +17,7 @@ it('keeps the open local importer mounted when an agent batch arrives', async ()
   TestBed.overrideComponent(PersonalFinance, {
     set: {
       providers: [
+        { provide: Inbox, useValue: { movementProposal: () => null } },
         { provide: LocalAgent, useValue: { importProposal: proposal, proposal: () => null, connected: () => false } },
         { provide: LedgerStore, useValue: { ledger: emptyLedger, ready: () => true, detect: vi.fn() } },
         { provide: Navigation, useValue: { headingFocus: () => null } },

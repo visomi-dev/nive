@@ -245,7 +245,7 @@
       (applied)="showImportResult($event)"
     />
 
-    @if (agent.proposal(); as proposal) {
+    @if (movementProposal(); as proposal) {
       @if (ledger.accounts.length) {
         <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-review">
           <h2 appUI uiSize="md" id="personal-review" i18n="@@personalReviewHeading">Review a proposed movement</h2>
@@ -289,7 +289,11 @@
             <label class="grid min-w-0 gap-1">
               <span i18n="@@personalMovementAccount">Source account</span>
 
-              <select appUI name="account">
+              <select appUI name="account" required>
+                <option value="" [selected]="!accountLabel(proposal.movement.accountId)" i18n="@@personalSelectAccount">
+                  Select an account
+                </option>
+
                 @for (account of ledger.accounts; track account.id) {
                   <option [value]="account.id" [selected]="account.id === proposal.movement.accountId">
                     {{ account.name }} ({{ account.currency }})
@@ -413,6 +417,21 @@
             Reject proposal
           </button>
         </section>
+      } @else {
+        <p appUI role="status" i18n="@@runtimeMovementAccountRequired">
+          Add a source account before reviewing this movement.
+        </p>
+
+        <button
+          appUI
+          type="button"
+          variant="secondary"
+          (click)="reject($event)"
+          [disabled]="busy()"
+          i18n="@@personalReject"
+        >
+          Reject proposal
+        </button>
       }
     }
 

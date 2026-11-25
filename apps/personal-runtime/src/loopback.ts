@@ -1,18 +1,20 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { bearer, runtimePort } from '@nive/finance';
+import { bearer, controlByteLimit, runtimePort } from '@nive/finance';
 
 import type { Broker } from './broker';
+import { DeviceControl } from './device-control';
 import type { RuntimeInbox } from './inbox';
 
 const host = '127.0.0.1';
 
-export async function startLoopback(broker: Broker, origin: string, openInbox: () => RuntimeInbox) {
+export async function startLoopback(broker: Broker, origin: string, code: string, openInbox: () => RuntimeInbox) {
   let inbox: RuntimeInbox;
+  let control: DeviceControl;
   const server = createServer(
     { requestTimeout: 6000, headersTimeout: 4000, keepAliveTimeout: 1000 },
     (request, response) => {
-      void handle(request, response, broker, inbox, origin).catch(() => send(response, 400));
+      void handle(request, response, broker, inbox, control, origin).catch(() => send(response, 400));
     },
   );
 
@@ -32,6 +34,7 @@ export async function startLoopback(broker: Broker, origin: string, openInbox: (
   try {
     // The listener owns the port before loading durable state.
     inbox = openInbox();
+    control = new DeviceControl(broker, inbox, code);
 
     return { inbox, stop };
   } catch (error) {
@@ -46,6 +49,7 @@ async function handle(
   response: ServerResponse,
   broker: Broker,
   inbox: RuntimeInbox,
+  control: DeviceControl,
   origin: string,
 ) {
   if (request.headers.host !== host + ':' + runtimePort || request.headers.origin !== origin) {
@@ -60,6 +64,8 @@ async function handle(
 
   if (
     ![
+      '/device/challenge',
+      '/device/control',
       '/pair',
       '/next',
       '/reply',
@@ -85,15 +91,44 @@ async function handle(
     return;
   }
 
-  const authorization = request.headers.authorization?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
-
-  if (request.method !== 'POST' || request.headers['content-type'] !== 'application/json' || !authorization) {
+  if (request.method !== 'POST' || request.headers['content-type'] !== 'application/json') {
     send(response, 403);
 
     return;
   }
 
-  const value = await body(request);
+  if (route === '/device/challenge') {
+    const value = await body(request, 64);
+
+    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 0) {
+      send(response, 400);
+
+      return;
+    }
+
+    send(response, 200, control.issue());
+
+    return;
+  }
+
+  if (route === '/device/control') {
+    const value = await body(request, controlByteLimit * 2 + 256);
+    const answer = await control.exchange(value);
+
+    send(response, answer ? 200 : 403, answer);
+
+    return;
+  }
+
+  const authorization = request.headers.authorization?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
+
+  if (!authorization || (route?.startsWith('/inbox/') && inbox.controlKey())) {
+    send(response, 403);
+
+    return;
+  }
+
+  const value = await body(request, 64_000);
 
   if (route === '/pair') {
     send(response, !inbox.enrolled() && broker.pair(authorization, value) ? 204 : 403);
@@ -132,7 +167,7 @@ async function handle(
   }
 }
 
-async function body(request: IncomingMessage): Promise<unknown> {
+async function body(request: IncomingMessage, limit: number): Promise<unknown> {
   const chunks: Buffer[] = [];
   let length = 0;
 
@@ -141,7 +176,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
 
     length += chunk.length;
 
-    if (length > 64_000) {
+    if (length > limit) {
       throw new Error('request_too_large');
     }
 

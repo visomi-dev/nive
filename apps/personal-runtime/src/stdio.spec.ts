@@ -5,16 +5,33 @@ import { join, resolve } from 'node:path';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { runtimeUrl, runtimeWork } from '@nive/finance';
+import {
+  addAccount,
+  deviceChallenge,
+  deviceMessage,
+  emptyLedger,
+  openDeviceMessage,
+  pairingControlKey,
+  postMovement,
+  readOnlyCopy,
+  runtimeUrl,
+  runtimeWork,
+  sealDeviceMessage,
+  type DeviceOperation,
+} from '@nive/finance';
 import { expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 const origin = 'http://localhost:18581';
 
-function post(route: string, token: string, body: unknown, webOrigin = origin) {
+function post(route: string, token: string | null, body: unknown, webOrigin = origin) {
   return fetch(runtimeUrl + route, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: webOrigin, Authorization: 'Bearer ' + token },
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: webOrigin,
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    },
     body: JSON.stringify(body),
   });
 }
@@ -264,6 +281,158 @@ it('persists an import over official stdio and restores its ciphertext after res
     });
   } finally {
     await client?.close();
+
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+it('authenticates a local device and separates copied-ledger reads from durable draft intake', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'nive-mcp-device-'));
+  const agent = new Client({ name: 'nive-device-test', version: '1.0.0' });
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [resolve(import.meta.dirname, '../../../dist/apps/personal-runtime/main.mjs')],
+    env: { NIVE_RUNTIME_DIR: dir, NIVE_WEB_ORIGIN: origin },
+    stderr: 'pipe',
+  });
+  const id = randomUUID();
+  const requestId = randomUUID();
+  const accountId = randomUUID();
+  const channel = randomBytes(32).toString('hex');
+  const proposalKey = randomBytes(32).toString('hex');
+  const account = addAccount(emptyLedger(), accountId, {
+    name: 'Synthetic encrypted account',
+    currency: 'MXN',
+    openingMinor: '10000',
+  });
+  const ledger = postMovement(account, randomUUID(), {
+    accountId,
+    kind: 'expense',
+    amountMinor: '2500',
+    date: '2026-11-09',
+    note: 'Synthetic note excluded from copy',
+  });
+  const snapshot = { revision: 4, capturedAt: '2026-11-25T20:00:00.000Z', ledger: readOnlyCopy(ledger) };
+  const draft = {
+    requestId,
+    movement: {
+      accountId,
+      kind: 'expense',
+      amountMinor: '193',
+      date: '2026-11-10',
+      note: 'Synthetic movement proposal',
+    },
+  };
+  const call = (name: string, args: Record<string, unknown>) => agent.callTool({ name, arguments: args });
+  const summary = () => call('nive_financial_summary', { month: '2026-11' });
+
+  async function prepare(operation: DeviceOperation, key: string, value: unknown) {
+    const offered = await post('/device/challenge', null, {});
+    const data: unknown = await offered.json();
+    const challenge = deviceChallenge.parse(data);
+
+    return sealDeviceMessage(crypto, key, { operation, ...challenge }, 'request', value);
+  }
+
+  async function exchange(operation: DeviceOperation, key: string, value: unknown) {
+    const wire = await prepare(operation, key, value);
+    const answer = await post('/device/control', null, wire);
+
+    expect(answer.status).toBe(200);
+    const response: unknown = await answer.json();
+
+    expect(response).toMatchObject({ challenge: wire.challenge, operation: wire.operation });
+
+    const clear = await openDeviceMessage(crypto, key, deviceMessage.parse(response), 'response');
+
+    return { wire, answer: clear };
+  }
+
+  try {
+    await agent.connect(transport);
+
+    const code = await readFile(join(dir, 'pairing-code'), 'utf8');
+    const pairingKey = await pairingControlKey(crypto, code.trim());
+    const pair = { id, channel, keyProof: createHash('sha256').update(proposalKey).digest('hex') };
+    const wrong = await prepare('pair', channel, pair);
+    const rejected = await post('/device/control', null, wrong);
+
+    expect(rejected.status).toBe(400);
+
+    const { wire, answer } = await exchange('pair', pairingKey, pair);
+
+    expect(answer).toEqual({ ok: true });
+    const repeated = await post('/device/control', null, wire);
+
+    expect(repeated.status).toBe(403);
+    const downgrade = await post('/inbox/authorize', channel, proposalKey);
+
+    expect(downgrade.status).toBe(403);
+
+    await expect(
+      exchange('authorize', channel, { capabilities: ['prepare-movement'], proposalKey, snapshot }),
+    ).resolves.toMatchObject({ answer: { ok: false } });
+
+    await expect(exchange('authorize', channel, { capabilities: ['read-summary'], snapshot })).resolves.toMatchObject({
+      answer: { ok: true },
+    });
+
+    await expect(summary()).resolves.toMatchObject({
+      structuredContent: {
+        snapshot: { revision: 4, capturedAt: snapshot.capturedAt },
+        accounts: [{ id: accountId, balanceMinor: '7500' }],
+        totals: [{ currency: 'MXN', expenseMinor: '2500' }],
+      },
+    });
+
+    await expect(call('nive_prepare_movement', draft)).resolves.toMatchObject({
+      structuredContent: { error: 'permission_denied' },
+    });
+
+    await expect(
+      exchange('authorize', channel, {
+        capabilities: ['read-summary'],
+        snapshot: { ...snapshot, revision: 3 },
+      }),
+    ).resolves.toMatchObject({ answer: { ok: false } });
+
+    const stored = await readFile(join(dir, 'import-inbox.json'), 'utf8');
+
+    expect(stored).toContain('"replica"');
+    expect(stored).not.toContain('Synthetic');
+    expect(stored).not.toContain(proposalKey);
+    expect(JSON.stringify(snapshot.ledger)).not.toContain('Synthetic note excluded from copy');
+
+    await expect(
+      exchange('authorize', channel, { capabilities: ['prepare-movement'], proposalKey }),
+    ).resolves.toMatchObject({ answer: { ok: true } });
+
+    await expect(summary()).resolves.toMatchObject({ structuredContent: { error: 'permission_denied' } });
+
+    await expect(call('nive_prepare_movement', draft)).resolves.toMatchObject({
+      structuredContent: { proposalId: requestId, status: 'pending' },
+    });
+
+    await expect(
+      call('nive_prepare_movement', { ...draft, movement: { ...draft.movement, amountMinor: '194' } }),
+    ).resolves.toMatchObject({ structuredContent: { error: 'conflict' } });
+
+    await expect(call('nive_approve_movement', draft)).resolves.toMatchObject({
+      structuredContent: { error: 'invalid' },
+    });
+
+    const current = await exchange('status', channel, {});
+
+    expect(current.answer).toMatchObject({ proposal: { id: requestId, capability: 'prepare-movement' } });
+    expect(JSON.stringify(current.answer)).not.toContain(draft.movement.note);
+
+    await expect(exchange('revoke', channel, {})).resolves.toMatchObject({ answer: { ok: true } });
+
+    await expect(call('nive_prepare_movement', draft)).resolves.toMatchObject({
+      structuredContent: { error: 'revoked' },
+    });
+  } finally {
+    await agent.close();
 
     await rm(dir, { recursive: true, force: true });
   }

@@ -42,7 +42,12 @@ export const preparationResult = z.strictObject({
   proposalId: z.uuid(),
   status: z.enum(['pending', 'rejected', 'applied']),
 });
-export const runtimeResult = z.union([runtimeFailure, summarySchema, preparationResult]);
+export const runtimeSummary = summarySchema.extend({
+  snapshot: z
+    .strictObject({ revision: z.number().int().nonnegative(), capturedAt: z.iso.datetime({ precision: 3 }) })
+    .optional(),
+});
+export const runtimeResult = z.union([runtimeFailure, runtimeSummary, preparationResult]);
 export type RuntimeResult = z.infer<typeof runtimeResult>;
 
 export const bearer = z.string().regex(/^[a-f0-9]{64}$/);

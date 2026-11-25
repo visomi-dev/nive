@@ -188,6 +188,19 @@ export class LedgerStore {
     }
   }
 
+  async runtimeSnapshot(): Promise<{ ledger: Ledger; revision: number }> {
+    await this.refresh();
+
+    this.requireReady();
+    const snapshot = this.contents();
+
+    if (!snapshot) {
+      throw new VaultError('locked');
+    }
+
+    return snapshot;
+  }
+
   async update(transform: (ledger: Ledger) => Ledger, authorized = () => true): Promise<void> {
     const binding = this.active();
     const storage = await this.database.vault(binding.ownerId, this.lifetime.signal);

@@ -16,6 +16,7 @@ import {
   parseMoney,
   period,
   summarize,
+  validateMovement,
   type Capability,
   type MovementInput,
 } from '@nive/finance';
@@ -25,10 +26,17 @@ import { NavigationHeading } from '../../shared/navigation-heading';
 import { Button, Card, Heading, Input, LinkButton, Select, Text } from '../../ui';
 
 import { ImportReview } from './import-review/import-review';
+import { Inbox } from './runtime-inbox/inbox';
 import { RuntimeInbox } from './runtime-inbox/runtime-inbox';
 import { LocalImport } from './local-import/local-import';
 import { LedgerStore } from './ledger-store';
 import { LocalAgent, type ImportProposal } from './local-agent';
+
+type DetachedReview = {
+  proposal: NonNullable<ReturnType<Inbox['movementProposal']>>;
+  before: Ledger;
+  movement: MovementInput;
+};
 
 @Component({
   selector: 'app-personal-finance',
@@ -47,12 +55,13 @@ import { LocalAgent, type ImportProposal } from './local-agent';
     Select,
     Text,
   ],
-  providers: [LedgerStore, LocalAgent],
+  providers: [LedgerStore, LocalAgent, Inbox],
   templateUrl: './personal.html',
 })
 export class PersonalFinance {
   private readonly document = inject(DOCUMENT);
   private readonly destroy = inject(DestroyRef);
+  private readonly inbox = inject(Inbox);
 
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
   private readonly desktop = signal(false);
@@ -94,13 +103,14 @@ export class PersonalFinance {
 
     return ledger && month.success ? summarize(ledger, month.data) : null;
   });
+  protected readonly movementProposal = computed(() => this.inbox.movementProposal() ?? this.agent.proposal());
 
-  protected readonly reviewed = signal<ReturnType<LocalAgent['review']> | null>(null);
+  protected readonly reviewed = signal<ReturnType<LocalAgent['review']> | DetachedReview | null>(null);
   protected readonly visibleReview = computed(() => {
     const review = this.reviewed();
     const ledger = this.store.ledger();
 
-    if (!review || !ledger || this.agent.proposal() !== review.proposal) {
+    if (!review || !ledger || this.movementProposal() !== review.proposal) {
       return null;
     }
 
@@ -247,7 +257,14 @@ export class PersonalFinance {
         ...(kind === 'transfer' ? { destinationId: input.get('destination') } : {}),
       });
 
-      this.reviewed.set(this.agent.review(movement));
+      const detached = this.inbox.movementProposal();
+      const before = this.store.ledger();
+
+      if (detached && before) {
+        this.reviewed.set({ proposal: detached, before, movement: validateMovement(before, movement) });
+      } else {
+        this.reviewed.set(this.agent.review(movement));
+      }
     } catch {
       this.feedback.set('error');
     }
@@ -258,7 +275,11 @@ export class PersonalFinance {
 
     if (reviewed && this.visibleReview() && event.isTrusted) {
       void this.handle(async () => {
-        await this.agent.approve(reviewed);
+        if ('before' in reviewed) {
+          await this.inbox.decideMovement(reviewed.proposal, reviewed);
+        } else {
+          await this.agent.approve(reviewed);
+        }
 
         this.reviewed.set(null);
         this.feedback.set('saved');
@@ -291,8 +312,15 @@ export class PersonalFinance {
 
   protected reject(event: Event): void {
     if (event.isTrusted) {
-      void this.handle(() => {
-        this.agent.reject();
+      void this.handle(async () => {
+        const detached = this.inbox.movementProposal();
+
+        if (detached) {
+          await this.inbox.decideMovement(detached);
+        } else {
+          this.agent.reject();
+        }
+
         this.reviewed.set(null);
         this.feedback.set('rejected');
       });
