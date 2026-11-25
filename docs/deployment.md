@@ -13,8 +13,8 @@ installed in a separate build stage. The final image preserves
 `dist/apps/web/{gateway,api,app,site}` together, runs as the unprivileged `node`
 user, and contains neither pnpm nor the root development tooling. The Node base
 is pinned by version and multi-platform image digest. Update the version and
-digest together and verify both images after updating. Compose explicitly
-selects `web-api` unless `APP_NAME` is supplied.
+digest together and verify both images after updating. Compose defaults to
+`web-gateway` unless `APP_NAME` is supplied.
 
 Application composition loads compiled sibling artifacts without starting extra
 listeners. The owning executable initializes and closes process-wide resources.
@@ -59,10 +59,9 @@ failed verification, failed jobs, and cancelled jobs fail the gate. A docs-only
 change can therefore pass without building unrelated applications. Do not add
 workflow-level path filters that prevent this required status from being reported.
 
-The active `required-ci` repository ruleset requires the `required` status from
-GitHub Actions and an up-to-date branch before merge. It supplements the existing
-`main` ruleset without replacing its security, coverage, or review rules.
-The workflow cancels superseded PR runs, but never cancels `main` runs.
+The `required` status from GitHub Actions is the merge gate for `main`. Verify
+that the repository ruleset enforces it before relying on branch protection.
+The workflow cancels superseded PR runs and lets every `main` run finish.
 
 ### Inputs and selection regression checks
 
@@ -88,9 +87,10 @@ do not select the gateway production image.
 pnpm nx run web-gateway:deployment-check
 pnpm nx show projects --affected -t e2e --files=styles.base.css --json
 pnpm nx run web-gateway:container-check
-# On development hosts with Podman instead of Docker:
-CONTAINER_ENGINE=podman pnpm nx run web-gateway:container-check
 ```
+
+On viserver, run local container fixtures through an isolated rootless Podman
+Compose project.
 
 ### Release selection
 
@@ -106,16 +106,113 @@ SDK or merging code does not authorize applying a plan or enabling telemetry.
 Keep environment-specific selections and credentials in operator-controlled
 configuration, outside the public documentation.
 
-After a release passes its health checks, verify its public origin:
+### Railway production
+
+[The Railway definition](../.railway/railway.ts) manages one gateway, private
+PostgreSQL, authenticated private Redis, private Jaeger and the private
+`private-files` S3 bucket. PostgreSQL stores authentication and application
+state. Redis carries realtime messages and persists writes with AOF. The bucket
+stores Vault backup objects and files. Jaeger receives authenticated traces
+from the gateway and stores them in Badger with the configured 48-hour
+retention. The PostgreSQL, Redis and Jaeger mounts are required for startup.
+The declared services have one instance each and keep the inherited volume
+capacities. The bucket uses an authenticated HTTPS endpoint.
+
+The root Dockerfile builds the gateway, website, app and API together. Astro
+uses the canonical origin in its [site configuration](../apps/web/site/astro.config.mjs)
+for canonical URLs and social metadata.
+Railway watches the runtime apps and libraries, build inputs, brand assets,
+and IaC paths. Separate CI and documentation changes do not need a new image.
+The image supplies the gateway entrypoint, bind address and production mode.
+Server trace export uses the application allowlist and private OTLP receiver.
+Railway edge tracing stays disabled and automatic browser capture continues to
+require consent.
+
+1. Confirm the exact GitHub `main` SHA has a successful CI run with a successful
+   `required` job. Investigate missing push runs before enabling automatic
+   deployment. Confirm Railway's GitHub installation can access the repository
+   and its check suites. The gateway source uses `main` with **Wait for CI**.
+2. Install workspace dependencies with `pnpm install --frozen-lockfile` and link
+   the Nive production environment. Use Railway CLI 5.74 or later. Save the
+   redacted plan for review, keeping the JSON artifact in a private directory
+   outside the checkout.
+
+   ```sh
+   umask 077
+   nive_plan_dir=$(mktemp -d)
+   railway config plan --out "$nive_plan_dir/plan.json"
+   ```
+
+3. Before the first approved apply, create the two
+   [shared receiver variables](#railway-receiver-credentials) in production
+   and regenerate the redacted plan against that state. Review the new plan
+   with the previously approved changes. Both Jaeger and the gateway require
+   the values at their first startup.
+4. After approval, apply the reviewed plan with
+   `railway config apply --plan "$nive_plan_dir/plan.json" --yes`. Replan and
+   review again if the target or source changed. Railway generates the
+   PostgreSQL password, Redis password and session secret and supplies the
+   bucket connection through credential references. Manage optional SMTP or
+   Google credentials in Railway variables. Outbound SMTP needs
+   [Railway Pro or above](https://docs.railway.com/networking/outbound-networking#email-delivery).
+   Verify PostgreSQL, Redis and Jaeger have private endpoints and no public
+   domain or TCP proxy. Check the Redis subscription, an authenticated synthetic
+   backup round trip and a synthetic server trace through the private collector.
+5. Railway's IaC planner does not register a new custom domain. After the
+   gateway exists, register it once with
+   `railway domain nive.visomi.dev --port 8080 --service web-gateway`.
+   Use the returned DNS records to update only the Nive hostname. Publish the
+   CNAME in DNS-only mode and add the Railway verification TXT record. Wait
+   for ownership verification and the HTTPS certificate. Keep this hostname
+   aligned with the auth settings and Angular SSR allowlist in the IaC and the
+   canonical origin in Astro.
+6. Confirm the gateway deployment SHA and health check at `/api/`. Railway
+   runs `node libs/backend/db/tools/migrate.mjs` in a separate pre-deploy
+   container using the final image and private database connection. If the
+   first migration starts before PostgreSQL is ready, wait for the database
+   and retry the same approved revision via Railway's deployment history.
+
+After a release passes its health checks, verify its public origin.
 
 ```sh
-node tools/deployment/smoke.mjs https://nive.example.invalid
+node tools/deployment/smoke.mjs https://nive.visomi.dev
 ```
 
-The smoke check uses only public requests. Avoid publishing raw HTTP logs,
-headers, exceptions, traces or credentials when diagnosing a deployment.
+Check that a fresh browser can reach sign-in from the app entry point, read an
+anonymous session and see the expected providers. Use a synthetic account and
+approved mailbox to verify registration and sign-in when SMTP is configured.
+Record which capabilities were exercised together with the CI run, deployment
+ID, SHA and smoke result. Avoid publishing raw HTTP logs, headers, exceptions,
+traces or credentials.
 
-## Enabling authentication later
+For later releases, let Railway deploy the CI-verified push to `main` and
+repeat the smoke check. If a release must be rolled back, select the previous
+successful gateway deployment in Railway after checking compatibility with the
+applied database migrations. An image rollback leaves the database schema and
+volume in place. On the first release there is no prior Nive deployment to
+restore. Pause gateway autodeploys and restore the saved Nive DNS records if
+the cutover must be undone.
+
+#### Railway receiver credentials
+
+The Railway IaC can reference shared environment variables but cannot derive a
+matching bcrypt htpasswd entry and HTTP Basic header from a secret. In Railway,
+open the linked project's **Settings → Shared Variables** for production. Use a
+new random password of at least 32 bytes for the `gateway` receiver identity.
+Generate both values from that same password in a private process and save them
+as production shared variables in Railway.
+
+- `NIVE_JAEGER_HTPASSWD` contains one bcrypt htpasswd line of the form
+  `gateway:<bcrypt hash>`, without a trailing newline.
+- `NIVE_OTLP_AUTH_HEADER` contains `authorization=` followed by the
+  URI-encoded string `Basic <base64 of gateway:password>`. Encode the entire
+  Basic credential value, including the space.
+
+Keep both values out of source, command history, logs and plan output. Reuse the
+existing pair on later deploys. Rotate both values together so the receiver and
+exporter agree.
+
+## Authentication configuration
 
 Provision a private PostgreSQL service and supply its connection through
 `DATABASE_URL`. Supply a random session secret
@@ -150,12 +247,11 @@ context are preserved. SSR engines are scoped to each composed application and
 rendered responses are not cached, including when a parent owns Helmet.
 
 Run the checked-in migrations as an explicit release step before enabling the
-database-backed service. The current `database-init` image owns migration tooling;
-the production image does not contain Drizzle Kit or migration sources. Do not
-copy Nive's migration command or assume migration layouts match. See the
-[API guide](../apps/web/api/README.md) and
+database-backed service. Compose uses the `database-init` image. Railway uses
+the checked-in SQL and Node migrator packaged in the production image, without
+Drizzle Kit or Nx. Gateway startup does not run migrations. Email verification
+needs SMTP configuration. See the [API guide](../apps/web/api/README.md) and
 [database initialization](development.md#container-database-initialization).
-Email verification additionally needs the repository's SMTP configuration.
 
 ## Observability and future workers
 
@@ -184,8 +280,6 @@ The runtime uses provider-independent OTLP settings:
 OTEL_EXPORTER_OTLP_ENDPOINT=<private-receiver-base-url>
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_EXPORTER_OTLP_HEADERS=<receiver-authentication-header>
-OTEL_METRICS_EXPORTER=none
-OTEL_LOGS_EXPORTER=none
 ```
 
 The three receiver settings activate application trace export together. With
@@ -230,9 +324,12 @@ test expiry. Run it through Nx, alongside the existing wire-level exporter tests
 
 ```sh
 pnpm nx run web-gateway:jaeger-check
-CONTAINER_ENGINE=podman pnpm nx run web-gateway:jaeger-check
 pnpm nx run web-backend-shared:test
 ```
+
+On viserver, use a rootless Podman Compose fixture with the pinned image,
+`jaeger.yaml`, a private network and a dedicated Badger volume. The
+`jaeger-check` target launches a standalone fixture in hosted CI.
 
 Use the approved private access path from an authorized workstation to inspect
 stored spans. Use application-generated trace IDs from allowlisted operational

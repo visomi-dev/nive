@@ -386,35 +386,119 @@ test('changes the synthetic Home chart and its accessible table in each locale',
   await capture(page, info, 'dashboard-mobile-es.png');
 });
 
-test('gives the shared language icon room while preserving localized links', async ({ page }) => {
-  for (const path of ['/en/', '/app/en/auth/sign-in/password']) {
-    await page.setViewportSize({ width: 768, height: 850 });
+test('switches the marketing website language with compact localized links', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 850 });
 
-    await page.goto(path);
+  const query = '?source=language-test';
 
-    const language = page.getByRole('navigation', { name: 'Language' });
-    const icon = language.locator('svg');
+  await page.goto('/en/' + query);
 
-    await expect(icon).toHaveCSS('width', '20px');
+  const language = page.getByRole('navigation', { name: 'Language', exact: true });
+  const currentEnglish = language.locator('[aria-current="true"]');
+  const spanish = language.getByRole('link', { name: 'Español', exact: true });
 
-    await expect(icon).toHaveCSS('margin-inline-end', '8px');
+  await expect(language.locator('svg')).toHaveCount(0);
 
-    const spanish = language.getByRole('link', { name: 'Español' });
+  await expect(currentEnglish).toHaveAttribute('lang', 'en');
 
-    await expect(spanish).toHaveCSS('min-height', '44px');
+  await expect(currentEnglish).toContainText('English');
 
-    await spanish.press('Enter');
+  await expect(currentEnglish.getByText('EN', { exact: true })).toBeVisible();
 
-    const localized = page.getByRole('navigation', { name: 'Idioma' });
+  await expect(spanish).toHaveText('ES');
 
-    await expect(localized.getByRole('link', { name: 'English' })).toBeVisible();
+  await expect(spanish).toHaveAttribute('hreflang', 'es');
 
-    await expect(localized.locator('svg')).toHaveCSS('width', '20px');
+  await expect(spanish).toHaveAttribute('lang', 'es');
 
-    await page.setViewportSize({ width: 320, height: 750 });
+  await expect(spanish).toHaveAttribute('href', '/es/' + query);
 
-    await expect(localized.locator('svg')).toBeHidden();
+  await expect(spanish).toHaveCSS('min-height', '44px');
 
-    await expect(localized.getByRole('link', { name: 'English' })).toBeVisible();
-  }
+  await expect(spanish).toHaveCSS('min-width', '44px');
+
+  await page.getByRole('link', { name: 'Nive — Home', exact: true }).focus();
+
+  await page.keyboard.press('Tab');
+
+  await expect(spanish).toBeFocused();
+
+  await page.keyboard.press('Enter');
+
+  await expect(page).toHaveURL('/es/' + query);
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+  await page.setViewportSize({ width: 320, height: 750 });
+
+  const localized = page.getByRole('navigation', { name: 'Idioma', exact: true });
+  const currentSpanish = localized.locator('[aria-current="true"]');
+  const english = localized.getByRole('link', { name: 'English', exact: true });
+
+  await expect(localized.locator('svg')).toHaveCount(0);
+
+  await expect(currentSpanish).toHaveAttribute('lang', 'es');
+
+  await expect(currentSpanish).toContainText('Español');
+
+  await expect(currentSpanish.getByText('ES', { exact: true })).toBeVisible();
+
+  await expect(english).toBeVisible();
+
+  await expect(english).toHaveText('EN');
+
+  await expect(english).toHaveAttribute('hreflang', 'en');
+
+  await expect(english).toHaveAttribute('lang', 'en');
+
+  await expect(english).toHaveAttribute('href', '/en/' + query);
+
+  await expect(english).toHaveCSS('min-height', '44px');
+
+  await expect(english).toHaveCSS('min-width', '44px');
+
+  await page.getByRole('link', { name: 'Nive — Inicio', exact: true }).focus();
+
+  await page.keyboard.press('Tab');
+
+  await expect(english).toBeFocused();
+
+  await page.keyboard.press('Enter');
+
+  await expect(page).toHaveURL('/en/' + query);
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('gives the Angular auth language icon room while preserving localized links', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 850 });
+
+  await page.goto('/app/en/auth/sign-in/password');
+
+  const language = page.getByRole('navigation', { name: 'Language', exact: true });
+  const icon = language.locator('svg');
+  const spanish = language.getByRole('link', { name: 'Español', exact: true });
+
+  await expect(icon).toHaveCSS('width', '20px');
+
+  await expect(icon).toHaveCSS('margin-inline-end', '8px');
+
+  await expect(spanish).toHaveCSS('min-height', '44px');
+
+  await spanish.press('Enter');
+
+  await expect(page).toHaveURL('/app/es/auth/sign-in/password');
+
+  const localized = page.getByRole('navigation', { name: 'Idioma', exact: true });
+  const english = localized.getByRole('link', { name: 'English', exact: true });
+
+  await expect(english).toBeVisible();
+
+  await expect(localized.locator('svg')).toHaveCSS('width', '20px');
+
+  await page.setViewportSize({ width: 320, height: 750 });
+
+  await expect(localized.locator('svg')).toBeHidden();
+
+  await expect(english).toBeVisible();
 });

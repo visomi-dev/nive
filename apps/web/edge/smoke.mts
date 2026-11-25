@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 
-const origin: string = process.env['NIVE_PUBLIC_ORIGIN'] ?? '';
-
-assert.ok(origin, 'Set NIVE_PUBLIC_ORIGIN before running the edge smoke check');
+const origin = 'https://nive.visomi.dev';
 const marker = 'SYNTHETIC_PRIVATE_QUERY';
 const invalid = ['%', '%zz', '%2', '%2X', '%0G', '%E0%A4%A', '%C3%28', '%FF', '%25%0G', '%/child'];
 const valid = ['%25', '%2525', '%20', '%2F', '%C3%A9', '%F0%9F%8C%8D', '%25zz'];

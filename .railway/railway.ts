@@ -1,21 +1,14 @@
 import { readFileSync } from 'node:fs';
 
-import {
-  bucket,
-  database,
-  defineRailway,
-  github,
-  image,
-  postgres,
-  preserve,
-  project,
-  service,
-  volume,
-} from 'railway/iac';
+import { bucket, defineRailway, github, image, preserve, project, ref, service, volume } from 'railway/iac';
 
-export const jaegerImage =
-  'jaegertracing/jaeger:2.22.0@sha256:4d9387a02389204ef9a256cf291a36cfbae91983010e403b4d300202d07eff2a';
-export const jaegerConfig = readFileSync(new URL('./jaeger.yaml', import.meta.url), 'utf8');
+const publicHost = 'nive.visomi.dev';
+const publicOrigin = `https://${publicHost}`;
+const region = 'us-east4-eqdc4a';
+const postgresMount = '/var/lib/postgresql/data';
+const redisMount = '/data';
+const jaegerMount = '/badger';
+const secretGenerator = 'secret(64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")';
 
 export const watchPatterns = [
   '/apps/web/gateway/**',
@@ -46,38 +39,60 @@ export const watchPatterns = [
   '/.railway/**',
 ];
 
-export default defineRailway(() => {
+export default defineRailway((context) => {
+  if (context.projectName !== 'nive' || !context.isEnvironment('production')) {
+    throw new Error('Select the nive production environment before planning its infrastructure.');
+  }
+
   const privateFiles = bucket('private-files', { region: 'iad' });
-  const brokerData = volume('redis-volume', { sizeMB: 50000, region: 'us-east4-eqdc4a' });
-  const broker = database('Redis', 'redis', {
-    image: 'redis:8.2',
-    output: 'REDIS_URL',
-    defaultMountPath: '/data',
-    region: 'us-east4-eqdc4a',
+  const databaseVolume = volume('postgres-volume', { sizeMB: 50000, region });
+  // The postgres() preset also provisions a public TCP proxy.
+  const appDatabase = service('Postgres', {
+    source: image(
+      'docker.io/library/postgres:16-alpine@sha256:866efe7070b471f3a5397edac0e5edd65c23ff056587c6e47c07d008caaedd28',
+    ),
+    replicas: { [region]: 1 },
+    tracing: { enabled: false },
+    volumeMounts: { [postgresMount]: databaseVolume },
+    deploy: { requiredMountPath: postgresMount },
+    env: {
+      PGDATA: `${postgresMount}/pgdata`,
+      POSTGRES_DB: 'nive',
+      POSTGRES_USER: 'postgres',
+      POSTGRES_PASSWORD: { generator: secretGenerator },
+      DATABASE_URL:
+        'postgresql://${{POSTGRES_USER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{POSTGRES_DB}}',
+    },
   });
 
-  broker.tracing = { enabled: false, autoInstrumentation: false };
-  broker.volumeAttachments = {
-    'redis-volume': { volume: brokerData.address, mountPath: '/data', volumeConfig: brokerData.config },
-  };
-  const databaseVolume = volume('postgres-volume', { sizeMB: 50000, region: 'us-east4-eqdc4a' });
-  const appDatabase = postgres('Postgres', { region: 'us-east4-eqdc4a' });
-
-  appDatabase.tracing = { enabled: false, autoInstrumentation: false };
-  appDatabase.volumeAttachments = {
-    'postgres-volume': {
-      volume: databaseVolume.address,
-      mountPath: '/var/lib/postgresql/data',
-      volumeConfig: databaseVolume.config,
-    },
-  };
-  const traces = volume('jaeger-data', { sizeMB: 1024, region: 'us-east4-eqdc4a' });
-  const jaeger = service('jaeger', {
-    source: image(jaegerImage),
-    tracing: { enabled: false, autoInstrumentation: false },
-    replicas: { 'us-east4-eqdc4a': 1 },
-    volumeMounts: { '/badger': traces },
+  const brokerData = volume('redis-volume', { sizeMB: 50000, region });
+  const broker = service('Redis', {
+    source: image(
+      'docker.io/library/redis:8.2@sha256:bb302517211721bf85ae3152b663c848a7cb36e79b02d69239ce20b5ddce95be',
+    ),
+    replicas: { [region]: 1 },
+    tracing: { enabled: false },
+    volumeMounts: { [redisMount]: brokerData },
     deploy: {
+      requiredMountPath: redisMount,
+      startCommand: `/bin/sh -c 'exec docker-entrypoint.sh redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"'`,
+    },
+    env: {
+      REDIS_PASSWORD: { generator: secretGenerator },
+      REDIS_URL: 'redis://:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379',
+    },
+  });
+
+  const traces = volume('jaeger-data', { sizeMB: 1024, region });
+  const jaeger = service('jaeger', {
+    source: image(
+      'jaegertracing/jaeger:2.22.0@sha256:4d9387a02389204ef9a256cf291a36cfbae91983010e403b4d300202d07eff2a',
+    ),
+    replicas: { [region]: 1 },
+    tracing: { enabled: false },
+    volumeMounts: { [jaegerMount]: traces },
+    deploy: {
+      requiredMountPath: jaegerMount,
       startCommand: '/cmd/jaeger/jaeger-linux --config env:JAEGER_CONFIG',
       limitOverride: { containers: { cpu: 0.5, memoryBytes: 500000000 } },
       healthcheckPath: '/status',
@@ -89,24 +104,21 @@ export default defineRailway(() => {
     },
     env: {
       PORT: '13133',
-      // Railway volumes are root-owned; this private storage process owns its mounted data.
+      // Railway mounts the Badger data volume with root ownership.
       RAILWAY_RUN_UID: '0',
-      JAEGER_CONFIG: jaegerConfig,
-      JAEGER_HTPASSWD: preserve(),
-      OTLP_AUTH_HEADER: preserve(),
+      JAEGER_CONFIG: readFileSync(new URL('./jaeger.yaml', import.meta.url), 'utf8'),
+      JAEGER_HTPASSWD: context.shared.NIVE_JAEGER_HTPASSWD,
     },
   });
-  const publicHost = process.env['NIVE_PUBLIC_HOST'] ?? 'nive.example.invalid';
+
   const gateway = service('web-gateway', {
-    source: github('visomi-dev/nive', { branch: 'main', commitSha: null, checkSuites: true }),
-    root: '/',
-    // Native edge tracing retains raw paths and client trace IDs independently of the application.
-    tracing: { enabled: false, autoInstrumentation: false },
-    domains: [{ domain: publicHost, port: 8080 }],
+    source: github('visomi-dev/nive', { branch: 'main', checkSuites: true }),
+    replicas: { [region]: 1 },
+    // Railway edge tracing can capture paths and client trace IDs outside the application allowlist.
+    tracing: { enabled: false },
     build: { builder: 'DOCKERFILE', dockerfilePath: 'Dockerfile', watchPatterns },
     deploy: {
-      startCommand: 'node dist/apps/web/gateway/main.js',
-      preDeployCommand: ['node libs/backend/shared/tools/database/migrate.mjs'],
+      preDeployCommand: ['node libs/backend/db/tools/migrate.mjs'],
       preDeployTimeoutSeconds: 120,
       healthcheckPath: '/api/',
       healthcheckTimeout: 60,
@@ -116,38 +128,33 @@ export default defineRailway(() => {
       sleepApplication: false,
     },
     env: {
-      APP_NAME: 'web-gateway',
-      HOST: '0.0.0.0',
       PORT: '8080',
-      NODE_ENV: 'production',
       DATABASE_URL: appDatabase.env.DATABASE_URL,
-      AUTH_ORIGIN: `https://${publicHost}`,
+      AUTH_ORIGIN: publicOrigin,
       AUTH_RP_ID: publicHost,
-      SESSION_SECRET: preserve(),
-      GOOGLE_AUTH_CLIENT_ID: preserve(),
-      // One sanitizing HTTP ingress; no raw TCP exposure and only trusted private callers.
+      NG_ALLOWED_HOSTS: publicHost,
+      SESSION_SECRET: { generator: secretGenerator },
+      // One Railway HTTP ingress and only trusted private-network callers.
       AUTH_TRUST_PROXY: '1-hop',
-      REALTIME_REDIS_URL: broker.env.REDIS_URL,
-      PRIVATE_S3_ENDPOINT: '${{private-files.ENDPOINT}}',
-      PRIVATE_S3_BUCKET: '${{private-files.BUCKET}}',
-      PRIVATE_S3_ACCESS_KEY: '${{private-files.ACCESS_KEY_ID}}',
-      PRIVATE_S3_SECRET_KEY: '${{private-files.SECRET_ACCESS_KEY}}',
+      GOOGLE_AUTH_CLIENT_ID: preserve(),
       SMTP_HOST: preserve(),
       SMTP_PORT: preserve(),
       SMTP_SECURE: preserve(),
       SMTP_FROM: preserve(),
       SMTP_USER: preserve(),
       SMTP_PASSWORD: preserve(),
-      ASTRO_TELEMETRY_DISABLED: '1',
+      REALTIME_REDIS_URL: broker.env.REDIS_URL,
+      PRIVATE_S3_ENDPOINT: ref(privateFiles, 'ENDPOINT'),
+      PRIVATE_S3_BUCKET: ref(privateFiles, 'BUCKET'),
+      PRIVATE_S3_ACCESS_KEY: ref(privateFiles, 'ACCESS_KEY_ID'),
+      PRIVATE_S3_SECRET_KEY: ref(privateFiles, 'SECRET_ACCESS_KEY'),
       OTEL_EXPORTER_OTLP_ENDPOINT: 'http://${{jaeger.RAILWAY_PRIVATE_DOMAIN}}:4318',
       OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
-      OTEL_EXPORTER_OTLP_HEADERS: jaeger.env.OTLP_AUTH_HEADER,
-      OTEL_METRICS_EXPORTER: 'none',
-      OTEL_LOGS_EXPORTER: 'none',
+      OTEL_EXPORTER_OTLP_HEADERS: context.shared.NIVE_OTLP_AUTH_HEADER,
     },
   });
 
   return project('nive', {
-    resources: [gateway, jaeger, broker, brokerData, appDatabase, databaseVolume, privateFiles],
+    resources: [gateway, appDatabase, databaseVolume, broker, brokerData, privateFiles, jaeger, traces],
   });
 });
