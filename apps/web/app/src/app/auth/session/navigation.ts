@@ -69,7 +69,7 @@ export function safeReturnTo(value: string | null, base: string): string | null 
   }
 
   if (
-    !/^\/(?:home|account|security(?:\/(?:passkeys|password|google|totp|recovery-codes|sessions|devices\/review))?)\/?$/.test(
+    !/^\/(?:home|personal|account|security(?:\/(?:passkeys|password|google|totp|recovery-codes|sessions|devices\/review))?)\/?$/.test(
       pathname,
     )
   ) {

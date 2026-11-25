@@ -3,35 +3,31 @@
     <h1 appUI appNavigationHeading id="welcome-title" i18n="@@firstUseTitle">What would you like to organize first?</h1>
 
     <p appUI tone="muted" i18n="@@firstUseIntroduction">Welcome to Nive. You can get started on your own.</p>
-
-    <a appUI="button" routerLink="/home" [replaceUrl]="true" i18n="@@firstUseContinue">Continue to Nive</a>
   </header>
 
-  <div appUI="card" layout="plain" class="space-y-5">
-    <div class="space-y-2">
-      <h2 appUI uiSize="sm" i18n="@@firstUseExampleTitle">Explore an example</h2>
+  <div class="flex flex-wrap gap-2">
+    <a
+      appUI="button"
+      routerLink="/personal"
+      [queryParams]="{ setup: 'choose' }"
+      [replaceUrl]="true"
+      i18n="@@onboardingBring"
+    >
+      Bring my transactions
+    </a>
 
-      <p appUI tone="muted" i18n="@@firstUseExampleDescription">See how the dashboard looks with sample data.</p>
+    <a appUI="button" variant="secondary" routerLink="/home" [replaceUrl]="true" i18n="@@onboardingManual">
+      Start without files
+    </a>
+  </div>
 
-      <a appUI="button" variant="secondary" href="home#example-dashboard" i18n="@@firstUseOpenExample">
-        Open example dashboard
-      </a>
-    </div>
+  <div appUI="card" layout="plain" class="space-y-2">
+    <h2 appUI uiSize="sm" i18n="@@firstUseExampleTitle">Explore an example</h2>
 
-    <div class="space-y-2">
-      <h2 appUI uiSize="sm" i18n="@@firstUseBudgetTitle">Plan your first budget</h2>
+    <p appUI tone="muted" i18n="@@firstUseExampleDescription">See how the dashboard looks with sample data.</p>
 
-      <p appUI tone="muted" i18n="@@firstUseBudgetDescription">
-        A budget helps plan your income and expenses. Creating a budget is not available yet.
-      </p>
-    </div>
-
-    <div class="space-y-2">
-      <h2 appUI uiSize="sm" i18n="@@firstUseImportTitle">Bring in your records</h2>
-
-      <p appUI tone="muted" i18n="@@firstUseImportDescription">
-        Start with records you already have when import becomes available.
-      </p>
-    </div>
+    <a appUI="button" variant="secondary" href="home#example-dashboard" i18n="@@firstUseOpenExample">
+      Open example dashboard
+    </a>
   </div>
 </section>

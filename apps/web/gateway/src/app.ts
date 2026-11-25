@@ -1,3 +1,4 @@
+import { localWebOrigin, runtimeUrl } from '@nive/finance';
 import type { BackupObjects } from '@visomi-stack/backend-db';
 import {
   HttpError,
@@ -28,8 +29,11 @@ export function createGatewayApp(options: {
   helmetMode?: 'managed' | 'inherited';
   errorMode?: 'managed' | 'inherited';
   staticDirectory?: string;
+  localAgentOrigin?: string;
 }) {
   const examples = options.api.exampleApiVersion === 1;
+  const agentOrigin = localWebOrigin(options.localAgentOrigin);
+  const localHost = agentOrigin ? new URL(agentOrigin).host : undefined;
   const app = express();
   const errors = pageErrors(options.site?.clientDirectory);
 
@@ -45,19 +49,27 @@ export function createGatewayApp(options: {
 
   if ((options.helmetMode ?? 'managed') === 'managed') {
     const headers = securityHeaders();
-    const applicationHeaders = securityHeaders({
+    const applicationPolicy = {
       nonce: true,
       wasm: true,
       google: options.auth?.googleEnabled === true,
-    });
+    };
+    const applicationHeaders = securityHeaders(applicationPolicy);
+    const localHeaders = localHost
+      ? securityHeaders({ ...applicationPolicy, localConnectSource: runtimeUrl })
+      : applicationHeaders;
 
-    app.use((request, response, next) =>
-      (request.path === '/app' || request.path.startsWith('/app/') ? applicationHeaders : headers)(
-        request,
-        response,
-        next,
-      ),
-    );
+    app.use((request, response, next) => {
+      if (request.path === '/app' || request.path.startsWith('/app/')) {
+        return (localHost && request.get('host') === localHost ? localHeaders : applicationHeaders)(
+          request,
+          response,
+          next,
+        );
+      }
+
+      return headers(request, response, next);
+    });
   }
 
   // This namespace never falls through to authentication or website rendering.
@@ -145,6 +157,12 @@ export function createGatewayApp(options: {
       }
     }, options.auth.middleware);
     app.use(authentication);
+  }
+
+  if (localHost && (options.helmetMode ?? 'managed') === 'managed') {
+    app.get('/api/personal/local-agent', (request, response) =>
+      response.set('cache-control', 'no-store').json({ enabled: request.get('host') === localHost }),
+    );
   }
 
   app.use(

@@ -5,7 +5,13 @@ import type { RequestHandler, Response } from 'express';
 import helmet from 'helmet';
 
 export function securityHeaders(
-  options: { production?: boolean; nonce?: boolean; google?: boolean; wasm?: boolean } = {},
+  options: {
+    production?: boolean;
+    nonce?: boolean;
+    google?: boolean;
+    wasm?: boolean;
+    localConnectSource?: string;
+  } = {},
 ): RequestHandler {
   const production = options.production ?? process.env['NODE_ENV'] === 'production';
   const nonceSource = (_request: unknown, response: ServerResponse) =>
@@ -20,12 +26,16 @@ export function securityHeaders(
           ...(options.wasm ? ["'wasm-unsafe-eval'"] : []),
           ...(options.google ? ['https://accounts.google.com/gsi/client'] : []),
         ],
-        ...(options.google
+        ...(options.google || options.localConnectSource
           ? {
-              connectSrc: ["'self'", 'https://accounts.google.com/gsi/'],
-              frameSrc: ["'self'", 'https://accounts.google.com/gsi/'],
+              connectSrc: [
+                "'self'",
+                ...(options.google ? ['https://accounts.google.com/gsi/'] : []),
+                ...(options.localConnectSource ? [options.localConnectSource] : []),
+              ],
             }
           : {}),
+        ...(options.google ? { frameSrc: ["'self'", 'https://accounts.google.com/gsi/'] } : {}),
         upgradeInsecureRequests: production ? [] : null,
       },
     },

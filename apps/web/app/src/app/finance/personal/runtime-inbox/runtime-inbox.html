@@ -1,0 +1,138 @@
+<section appUI="card" layout="plain" class="space-y-4" aria-labelledby="runtime-inbox-title">
+  <h2 appUI uiSize="md" id="runtime-inbox-title" i18n="@@runtimeInboxTitle">Local runtime</h2>
+
+  <p appUI tone="muted" i18n="@@runtimeInboxScope">
+    Pair the runtime on this computer and choose what it can do for 15 minutes, including when this tab is closed.
+    Review and approve proposals in Nive.
+  </p>
+
+  @if (inbox.enrollment(); as enrollment) {
+    <p appUI i18n="@@runtimeInboxDevice">Installation {{ enrollment.id }}</p>
+
+    @if (enrollment.revoked) {
+      <p appUI role="status" i18n="@@runtimeInboxRevokePending">
+        Revoked in this vault. If the runtime was offline, retry revocation when it is available.
+      </p>
+    } @else if (inbox.online()) {
+      @if (inbox.expiresAt(); as deadline) {
+        <p appUI role="status" i18n="@@runtimeInboxAuthorized">
+          The latest authorization ends at {{ deadline | date: 'shortTime' }}. You can close the tab and return to
+          review the proposal.
+        </p>
+      } @else {
+        <p appUI role="status" i18n="@@runtimeInboxLocked">
+          The runtime needs a new authorization to use the selected tools.
+        </p>
+      }
+
+      <form #grantForm (submit)="authorize($event, grantForm)" class="space-y-3">
+        @if (enrollment.secureControl) {
+          <fieldset class="space-y-2">
+            <legend appUI i18n="@@runtimeGrantOptions">Tools to authorize</legend>
+
+            <label class="flex items-start gap-2">
+              <input name="capability" type="checkbox" value="prepare-import" />
+
+              <span i18n="@@runtimeGrantImport">Prepare import proposals</span>
+            </label>
+
+            <label class="flex items-start gap-2">
+              <input name="capability" type="checkbox" value="prepare-movement" />
+
+              <span i18n="@@runtimeGrantMovement">Prepare individual movement proposals</span>
+            </label>
+
+            <label class="flex items-start gap-2">
+              <input name="capability" type="checkbox" value="read-summary" />
+
+              <span i18n="@@runtimeGrantSummary">
+                Share account names, balances and monthly totals with Codex from a read-only copy captured now
+              </span>
+            </label>
+          </fieldset>
+        } @else {
+          <p appUI tone="muted" i18n="@@runtimeGrantLegacy">
+            This installation can receive imports. To authorize summaries or individual movements, revoke it and pair
+            again with a fresh code.
+          </p>
+        }
+
+        <button appUI type="submit" [disabled]="busy()" i18n="@@runtimeInboxAuthorize">Authorize for 15 minutes</button>
+      </form>
+
+      <button
+        appUI
+        variant="secondary"
+        type="button"
+        (click)="refresh()"
+        [disabled]="busy()"
+        i18n="@@runtimeInboxRefresh"
+      >
+        Check for proposals
+      </button>
+    }
+
+    <button
+      appUI
+      variant="secondary"
+      type="button"
+      (click)="revoke($event)"
+      [disabled]="busy()"
+      i18n="@@runtimeInboxRevoke"
+    >
+      Revoke this installation
+    </button>
+  }
+
+  @if (!inbox.online() && !inbox.enrollment()?.revoked) {
+    <form #pairingForm (submit)="pair($event, pairingForm)" class="grid gap-3">
+      <label class="grid gap-1">
+        <span i18n="@@runtimeInboxCode">Runtime pairing code</span>
+
+        <input appUI name="code" type="password" required minlength="64" maxlength="64" autocomplete="off" />
+      </label>
+
+      <label class="flex items-start gap-2">
+        <input type="checkbox" name="consent" required />
+
+        <span i18n="@@runtimeInboxConsent">
+          I trust this installation. Codex and its provider process the files I select in the chat and receive any
+          summaries I request.
+        </span>
+      </label>
+
+      <button appUI type="submit" [disabled]="busy()" class="justify-self-start" i18n="@@runtimeInboxPair">
+        Pair local runtime
+      </button>
+    </form>
+
+    @if (inbox.enrollment()) {
+      <button
+        appUI
+        variant="secondary"
+        type="button"
+        (click)="refresh()"
+        [disabled]="busy()"
+        i18n="@@runtimeInboxReconnect"
+      >
+        Check paired installation
+      </button>
+    }
+  }
+
+  @if (inbox.proposal(); as proposal) {
+    <app-import-review
+      [batch]="proposal.batch"
+      [digest]="proposal.digest"
+      [busy]="busy()"
+      (approved)="approve(proposal.batch.requestId, proposal.digest, $event)"
+      (rejected)="reject(proposal.batch.requestId, proposal.digest)"
+    />
+  }
+
+  @if (failed()) {
+    <p appUI role="alert" i18n="@@runtimeInboxError">
+      Check the runtime, pairing code, and open vault. Your saved state is kept for retry.
+    </p>
+  }
+</section>

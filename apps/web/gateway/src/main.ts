@@ -31,6 +31,7 @@ import type { EmbeddedAuthentication } from './api-module';
 import { createGatewayApp } from './app';
 import { loadSite } from './site-module';
 import { loadApplication } from './application-module';
+import { configuredLocalAgentOrigin } from './local-agent-config';
 import { loadRealtime } from './realtime-module';
 
 import { stackVisitPages } from '@visomi-stack/web-shared-observability';
@@ -211,6 +212,7 @@ async function bootstrap() {
 
   const application = createGatewayApp({
     visits,
+    localAgentOrigin: configuredLocalAgentOrigin(process.env),
     ...(exampleHarness ? { exampleHarness } : {}),
     ...(backupObjects ? { backupObjects } : {}),
     api,

@@ -1,0 +1,531 @@
+<section class="min-w-0 space-y-6">
+  <header class="space-y-2">
+    <h1 appUI appNavigationHeading [appHeadingFocus]="requested() === null" i18n="@@personalPageTitle">
+      Personal finances
+    </h1>
+
+    <p appUI tone="muted" i18n="@@personalVaultPrivacy">
+      This workspace is encrypted and stays in this browser. Unlock it separately with your vault passkey.
+    </p>
+  </header>
+
+  @if (setup(); as step) {
+    <app-bring-movements [step]="step" [supported]="local()" />
+  } @else if (requested() && !store.ledger()) {
+    <a appUI="button" variant="secondary" routerLink="/personal" i18n="@@onboardingManual">Start without files</a>
+  } @else if (emptyWorkspace() && !importResult()) {
+    <a appUI="button" routerLink="/personal" [queryParams]="{ setup: 'choose' }" i18n="@@onboardingBring">
+      Bring my transactions
+    </a>
+  }
+
+  <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-vault">
+    <h2 appUI uiSize="md" id="personal-vault" i18n="@@personalVaultHeading">Personal vault</h2>
+
+    @if (store.ready()) {
+      <button appUI type="button" variant="secondary" (click)="lock()" i18n="@@personalVaultLock">Lock vault</button>
+    } @else {
+      @if (store.configured() === true) {
+        <button appUI type="button" [disabled]="busy()" (click)="open()" i18n="@@personalVaultUnlock">
+          Unlock with vault passkey
+        </button>
+      } @else if (store.configured() === false) {
+        <button appUI type="button" [disabled]="busy()" (click)="open()" i18n="@@personalVaultCreate">
+          Create personal vault with a passkey
+        </button>
+      } @else if (busy()) {
+        <p role="status" i18n="@@onboardingCheckingVault">Checking your vault…</p>
+      } @else {
+        <button appUI type="button" variant="secondary" (click)="detectVault()" i18n="@@onboardingRetryVault">
+          Check vault again
+        </button>
+      }
+    }
+  </section>
+
+  @if (agent.connected() || (local() && !requested() && store.ready() && !store.ledger()?.runtimeInbox)) {
+    <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="local-agent">
+      <h2 appUI uiSize="md" id="local-agent" i18n="@@personalAgentHeading">Local agent</h2>
+
+      @if (agent.connected()) {
+        <p appUI role="status" i18n="@@personalAgentConnected">
+          Connected for this tab. The connection expires after 15 minutes.
+        </p>
+
+        <ul class="space-y-1">
+          @if (agent.grants().includes('prepare-import')) {
+            <li i18n="@@importGranted">Can propose import and budget plans for review.</li>
+          }
+
+          @if (agent.grants().includes('read-summary')) {
+            <li i18n="@@personalAgentGrantedRead">Can read accounts and monthly totals.</li>
+          }
+
+          @if (agent.grants().includes('prepare-movement')) {
+            <li i18n="@@personalAgentGrantedPrepare">Can prepare movements for review.</li>
+          }
+        </ul>
+
+        <button appUI type="button" variant="secondary" (click)="agent.revoke()" i18n="@@personalAgentRevoke">
+          Revoke agent connection
+        </button>
+      } @else if (!setup() || store.ready()) {
+        <form #pairForm (submit)="connect($event, pairForm)" class="grid gap-3">
+          <label class="grid gap-1">
+            <span i18n="@@personalAgentCode">Local runtime pairing code</span>
+
+            <input appUI name="pairing" type="password" required minlength="64" maxlength="64" autocomplete="off" />
+          </label>
+
+          <label class="flex items-start gap-2">
+            <input name="read" type="checkbox" />
+
+            <span i18n="@@personalAgentRead">Share account names, balances and monthly income and expense totals.</span>
+          </label>
+
+          <label class="flex items-start gap-2">
+            <input name="prepare" type="checkbox" />
+
+            <span i18n="@@personalAgentPrepare">Let the agent prepare movements for my review.</span>
+          </label>
+
+          <label class="flex items-start gap-2">
+            <input name="import" type="checkbox" [required]="setup() === 'agent'" />
+
+            <span i18n="@@importGrant">Let the agent propose account, movement and budget imports for review.</span>
+          </label>
+
+          @if (setup() !== 'agent') {
+            <p i18n="@@importPrivacy">
+              Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither
+              forwards nor stores the original file.
+            </p>
+          }
+
+          <label class="flex items-start gap-2">
+            <input name="consent" type="checkbox" required />
+
+            <span i18n="@@personalAgentConsent">
+              I understand my agent and its model provider may receive the financial data I allow it to read.
+            </span>
+          </label>
+
+          <button appUI type="submit" class="justify-self-start" [disabled]="busy()" i18n="@@personalAgentAuthorize">
+            Authorize local agent
+          </button>
+        </form>
+      } @else {
+        <p appUI tone="muted" i18n="@@onboardingAgentUnlock">Open your personal vault to grant import permission.</p>
+      }
+    </section>
+  }
+
+  @if (store.ledger(); as ledger) {
+    @if (local() && (!requested() || setup() === 'agent' || ledger.runtimeInbox) && !agent.connected()) {
+      <app-runtime-inbox (applied)="showImportResult($event)" />
+    }
+
+    @if (importResult(); as result) {
+      <section appUI="card" layout="plain" class="space-y-3" aria-labelledby="import-result-title">
+        <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="import-result-title" i18n="@@onboardingImportSaved">
+          Import complete
+        </h2>
+
+        @if (result.accounts || result.movements || result.budgets) {
+          <div class="flex flex-wrap gap-2">
+            @if (result.accounts) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-accounts"
+                i18n="@@onboardingAccounts"
+              >
+                Accounts
+              </a>
+            }
+
+            @if (result.movements) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-movements"
+                i18n="@@personalMovements"
+              >
+                Movements
+              </a>
+            }
+
+            @if (result.budgets) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-budgets"
+                i18n="@@onboardingBudgets"
+              >
+                Budgets
+              </a>
+            }
+          </div>
+        } @else {
+          <p appUI i18n="@@onboardingNoChanges">No accounts, movements or budgets changed.</p>
+        }
+      </section>
+    }
+
+    <section
+      [hidden]="!!setup()"
+      appUI="card"
+      padding="sm"
+      layout="plain"
+      class="space-y-3"
+      aria-labelledby="personal-accounts"
+    >
+      <h2 appUI uiSize="md" tabindex="-1" id="personal-accounts" i18n="@@personalAccounts">Accounts and balances</h2>
+
+      <form #accountForm (submit)="createAccount($event, accountForm)" class="grid gap-3 sm:grid-cols-3">
+        <label class="grid min-w-0 gap-1">
+          <span i18n="@@personalAccountName">Account name</span>
+
+          <input appUI name="name" required maxlength="80" />
+        </label>
+
+        <label class="grid min-w-0 gap-1">
+          <span i18n="@@personalAccountCurrency">Currency</span>
+
+          <select appUI name="currency">
+            @for (code of currencies; track code) {
+              <option [value]="code">{{ code }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="grid min-w-0 gap-1">
+          <span i18n="@@personalAccountOpening">Opening amount</span>
+
+          <input appUI name="opening" value="0" required inputmode="decimal" maxlength="23" />
+        </label>
+
+        <button appUI type="submit" class="justify-self-start" [disabled]="busy()" i18n="@@personalAccountAdd">
+          Add account
+        </button>
+      </form>
+
+      @if (summary(); as values) {
+        <ul class="space-y-2">
+          @for (account of values.accounts; track account.id) {
+            <li class="break-words">
+              {{ account.name }} · {{ account.currency }} {{ format(account.balanceMinor, account.currency) }}
+            </li>
+          } @empty {
+            <li i18n="@@personalAccountEmpty">Add an account to get started.</li>
+          }
+        </ul>
+      }
+    </section>
+
+    @if (agent.importProposal(); as proposal) {
+      <app-import-review
+        [batch]="proposal.batch"
+        [digest]="proposal.digest"
+        [busy]="busy()"
+        (approved)="approveImport(proposal, $event)"
+        (rejected)="rejectImport()"
+      />
+    }
+
+    <app-local-import
+      [hidden]="setup() === 'choose' || setup() === 'agent'"
+      [expanded]="setup() === 'local'"
+      (applied)="showImportResult($event)"
+    />
+
+    @if (movementProposal(); as proposal) {
+      @if (ledger.accounts.length) {
+        <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-review">
+          <h2 appUI uiSize="md" id="personal-review" i18n="@@personalReviewHeading">Review a proposed movement</h2>
+
+          <p appUI tone="muted" i18n="@@personalReviewDescription">
+            Edit the proposal, then review the exact values before approving.
+          </p>
+
+          <form
+            #movementForm
+            (submit)="review($event, movementForm)"
+            (input)="reviewed.set(null)"
+            class="grid gap-3 sm:grid-cols-2"
+          >
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalMovementKind">Movement type</span>
+
+              <select appUI name="kind">
+                <option
+                  value="expense"
+                  [selected]="proposal.movement.kind === 'expense'"
+                  i18n="@@personalMovementExpense"
+                >
+                  Expense
+                </option>
+
+                <option value="income" [selected]="proposal.movement.kind === 'income'" i18n="@@personalMovementIncome">
+                  Income
+                </option>
+
+                <option
+                  value="transfer"
+                  [selected]="proposal.movement.kind === 'transfer'"
+                  i18n="@@personalMovementTransfer"
+                >
+                  Transfer
+                </option>
+              </select>
+            </label>
+
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalMovementAccount">Source account</span>
+
+              <select appUI name="account" required>
+                <option value="" [selected]="!accountLabel(proposal.movement.accountId)" i18n="@@personalSelectAccount">
+                  Select an account
+                </option>
+
+                @for (account of ledger.accounts; track account.id) {
+                  <option [value]="account.id" [selected]="account.id === proposal.movement.accountId">
+                    {{ account.name }} ({{ account.currency }})
+                  </option>
+                }
+              </select>
+            </label>
+
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalTransferAccount">Destination account for transfers</span>
+
+              <select appUI name="destination">
+                <option value="" i18n="@@personalSelectAccount">Select an account</option>
+
+                @for (account of ledger.accounts; track account.id) {
+                  <option
+                    [value]="account.id"
+                    [selected]="proposal.movement.kind === 'transfer' && account.id === proposal.movement.destinationId"
+                  >
+                    {{ account.name }} ({{ account.currency }})
+                  </option>
+                }
+              </select>
+            </label>
+
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalMovementAmount">Amount</span>
+
+              <input
+                appUI
+                name="amount"
+                inputmode="decimal"
+                [value]="displayAmount(proposal.movement.accountId, proposal.movement.amountMinor)"
+                required
+                maxlength="23"
+              />
+            </label>
+
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalMovementDate">Date</span>
+
+              <input appUI name="date" type="date" [value]="proposal.movement.date" required />
+            </label>
+
+            <label class="grid min-w-0 gap-1">
+              <span i18n="@@personalMovementNote">Note</span>
+
+              <input appUI name="note" [value]="proposal.movement.note" maxlength="140" />
+            </label>
+
+            <button
+              appUI
+              type="submit"
+              variant="secondary"
+              class="justify-self-start"
+              [disabled]="busy()"
+              i18n="@@personalReviewValues"
+            >
+              Review exact values
+            </button>
+          </form>
+
+          @if (visibleReview(); as review) {
+            <div class="space-y-3" aria-live="polite">
+              <dl class="space-y-2 break-words">
+                <div>
+                  <dt i18n="@@personalConfirmKind">Type</dt>
+
+                  <dd>{{ movementName(review.movement.kind) }}</dd>
+                </div>
+
+                <div>
+                  <dt i18n="@@personalConfirmAccount">Account</dt>
+
+                  <dd>{{ review.account.name }}</dd>
+                </div>
+
+                @if (review.destination; as destination) {
+                  <div>
+                    <dt i18n="@@personalConfirmDestination">Destination</dt>
+
+                    <dd>{{ destination.name }}</dd>
+                  </div>
+                }
+
+                <div>
+                  <dt i18n="@@personalMovementAmount">Amount</dt>
+
+                  <dd>
+                    {{ review.account.currency }} {{ format(review.movement.amountMinor, review.account.currency) }}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt i18n="@@personalMovementDate">Date</dt>
+
+                  <dd>{{ review.movement.date }}</dd>
+                </div>
+
+                <div>
+                  <dt i18n="@@personalMovementNote">Note</dt>
+
+                  <dd>{{ review.movement.note }}</dd>
+                </div>
+              </dl>
+
+              <button appUI type="button" (click)="approve($event)" [disabled]="busy()" i18n="@@personalApprove">
+                Approve and save movement
+              </button>
+            </div>
+          }
+
+          <button
+            appUI
+            type="button"
+            variant="secondary"
+            (click)="reject($event)"
+            [disabled]="busy()"
+            i18n="@@personalReject"
+          >
+            Reject proposal
+          </button>
+        </section>
+      } @else {
+        <p appUI role="status" i18n="@@runtimeMovementAccountRequired">
+          Add a source account before reviewing this movement.
+        </p>
+
+        <button
+          appUI
+          type="button"
+          variant="secondary"
+          (click)="reject($event)"
+          [disabled]="busy()"
+          i18n="@@personalReject"
+        >
+          Reject proposal
+        </button>
+      }
+    }
+
+    @if (ledger.budgets.length && !setup()) {
+      <section appUI="card" padding="sm" layout="plain" class="space-y-3">
+        <h2 appUI uiSize="md" id="personal-budgets" tabindex="-1" i18n="@@importSavedBudget">Budget plan</h2>
+
+        <ul class="space-y-2">
+          @for (line of ledger.budgets; track $index) {
+            <li>
+              {{ line.month }} · {{ accountLabel(line.accountId) }} · {{ line.category }} ·
+              <span i18n="@@importBudget">Monthly spending limit</span>
+              {{ displayAmount(line.accountId, line.limitMinor) }} ·
+              <span i18n="@@importSpent">Spent</span>
+              {{ displayAmount(line.accountId, spending(ledger, line.accountId, line.category, [line.month])) }} ·
+              <span i18n="@@importObserved">Observed spending</span>
+              ({{ line.basisMonths.join(', ') }})
+              {{ displayAmount(line.accountId, spending(ledger, line.accountId, line.category, line.basisMonths)) }}
+              <details>
+                <summary i18n="@@importEvidence">Source movements</summary>
+
+                <ul>
+                  @for (entry of evidence(ledger, line.accountId, line.category, line.basisMonths); track entry.id) {
+                    <li>
+                      {{ entry.movement.date }} · {{ entry.movement.note }} ·
+                      {{ displayAmount(line.accountId, entry.movement.amountMinor) }}
+                    </li>
+                  }
+                </ul>
+              </details>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <section
+      appUI="card"
+      [hidden]="!!setup()"
+      padding="sm"
+      layout="plain"
+      class="space-y-3"
+      aria-labelledby="personal-movements"
+    >
+      <h2 appUI uiSize="md" tabindex="-1" id="personal-movements" i18n="@@personalMovements">Movements</h2>
+
+      <label class="grid max-w-xs gap-1">
+        <span i18n="@@personalSummaryMonth">Summary month</span>
+
+        <input appUI type="month" [value]="month()" (input)="month.set($any($event.target).value)" />
+      </label>
+
+      @if (summary(); as values) {
+        <ul class="space-y-2">
+          @for (total of values.totals; track total.currency) {
+            <li>
+              {{ total.currency }} ·
+              <span i18n="@@personalTotalIncome">Income</span>
+              {{ format(total.incomeMinor, total.currency) }} ·
+              <span i18n="@@personalTotalExpense">Expenses</span>
+              {{ format(total.expenseMinor, total.currency) }}
+            </li>
+          }
+        </ul>
+      }
+
+      <ul class="space-y-2 break-words">
+        @for (entry of ledger.movements; track entry.id) {
+          <li>
+            {{ entry.movement.date }} · {{ movementName(entry.movement.kind) }} ·
+            {{ displayAmount(entry.movement.accountId, entry.movement.amountMinor) }} · {{ entry.movement.note }} ·
+            {{ entry.category }}
+            @for (source of entry.sources; track $index) {
+              <small>{{ sourceText(source) }}</small>
+            }
+          </li>
+        } @empty {
+          <li i18n="@@personalMovementsEmpty">No movements yet.</li>
+        }
+      </ul>
+    </section>
+  }
+
+  @switch (feedback()) {
+    @case ('error') {
+      <p appUI role="alert" i18n="@@personalActionError">
+        The action could not be completed. Check your input, passkey, vault and connection.
+      </p>
+    }
+    @case ('saved') {
+      <p appUI role="status" i18n="@@personalSaved">Saved in your personal vault.</p>
+    }
+    @case ('rejected') {
+      <p appUI role="status" i18n="@@personalRejected">Proposal rejected.</p>
+    }
+  }
+</section>

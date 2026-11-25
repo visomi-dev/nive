@@ -121,6 +121,10 @@ export const appRoutes: Routes = [
       },
       { path: 'home', loadComponent: () => import('./home/home').then((m) => m.Home) },
       {
+        path: 'personal',
+        loadComponent: () => import('./finance/personal/personal').then((m) => m.PersonalFinance),
+      },
+      {
         path: 'welcome',
         canActivate: [welcomeGuard],
         loadComponent: () => import('./onboarding/welcome/welcome').then((m) => m.Welcome),

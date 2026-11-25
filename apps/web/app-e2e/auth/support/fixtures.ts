@@ -160,7 +160,7 @@ export async function continueAfterSignup(page: Page): Promise<void> {
     page.getByRole('heading', { name: 'What would you like to organize first?', exact: true }),
   ).toBeVisible();
 
-  await page.getByRole('link', { name: 'Continue to Nive', exact: true }).click();
+  await page.getByRole('link', { name: 'Start without files', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
 }

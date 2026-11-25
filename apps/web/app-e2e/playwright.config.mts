@@ -81,12 +81,12 @@ export default defineConfig(
           { name: 'auth-chromium', use: { ...devices['Desktop Chrome'] } },
           {
             name: 'auth-firefox',
-            testIgnore: ['**/passkeys.auth.spec.ts', '**/persistence.auth.spec.ts'],
+            testIgnore: ['**/passkeys.auth.spec.ts', '**/persistence.auth.spec.ts', '**/personal-import.auth.spec.ts'],
             use: { ...devices['Desktop Firefox'] },
           },
           {
             name: 'auth-webkit',
-            testIgnore: ['**/passkeys.auth.spec.ts', '**/persistence.auth.spec.ts'],
+            testIgnore: ['**/passkeys.auth.spec.ts', '**/persistence.auth.spec.ts', '**/personal-import.auth.spec.ts'],
             use: { ...devices['Desktop Safari'] },
           },
         ],
