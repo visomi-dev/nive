@@ -179,7 +179,7 @@ export class LocalAgent {
     const authorized = () =>
       this.current(link) &&
       link.grants.includes(capability) &&
-      this.store.ready() &&
+      this.store.isReady() &&
       this.pending() === proposal &&
       Date.now() < proposal.expiresAt;
 
@@ -283,7 +283,7 @@ export class LocalAgent {
         }
 
         // A lock between reading and returning prevents release of the projection.
-        const reply = this.store.ready() ? result : { error: 'locked' };
+        const reply = this.store.isReady() ? result : { error: 'locked' };
 
         await this.request('/reply', link.token, { id: state.work.id, result: reply }, signal);
       }
@@ -303,7 +303,7 @@ export class LocalAgent {
       return { error: 'permission_denied' };
     }
 
-    if (!this.store.ready()) {
+    if (!this.store.isReady()) {
       return { error: 'locked' };
     }
 
@@ -316,7 +316,7 @@ export class LocalAgent {
     try {
       const ledger = await this.store.refresh();
 
-      if (!this.current(link) || !this.store.ready()) {
+      if (!this.current(link) || !this.store.isReady()) {
         return { error: 'locked' };
       }
 
@@ -329,7 +329,7 @@ export class LocalAgent {
         call.capability === 'prepare-import' ? importDigest(call.input) : movementDigest(call.input.movement);
       const original = await fingerprint;
 
-      if (!this.current(link) || !this.store.ready()) {
+      if (!this.current(link) || !this.store.isReady()) {
         return { error: 'locked' };
       }
 
@@ -385,14 +385,14 @@ export class LocalAgent {
 
       return { proposalId: requestId, status: 'pending' };
     } catch {
-      return { error: this.store.ready() ? 'invalid' : 'locked' };
+      return { error: this.store.isReady() ? 'invalid' : 'locked' };
     }
   }
 
   private expireProposal(): void {
     const proposal = this.pending();
 
-    if (proposal && (!this.store.ready() || Date.now() >= proposal.expiresAt)) {
+    if (proposal && (!this.store.isReady() || Date.now() >= proposal.expiresAt)) {
       this.receipts.get(proposal.id)!.status = 'expired';
       this.pending.set(null);
     }
@@ -419,7 +419,7 @@ export class LocalAgent {
 
     if (link && !this.sameSession(link)) {
       this.disconnect(link);
-    } else if (!this.store.ready()) {
+    } else if (!this.store.isReady()) {
       this.expireProposal();
     }
   });

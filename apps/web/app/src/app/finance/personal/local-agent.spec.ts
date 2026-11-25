@@ -75,7 +75,7 @@ async function setup(grants: Capability[] = ['prepare-import'], unlocked = true,
     providers: [
       LocalAgent,
       { provide: Session, useValue: session },
-      { provide: LedgerStore, useValue: { ready, ledger, refresh: () => Promise.resolve(ledger()), update } },
+      { provide: LedgerStore, useValue: { isReady: ready, ledger, refresh: () => Promise.resolve(ledger()), update } },
       {
         provide: DOCUMENT,
         useValue: { defaultView: { location: { origin: 'http://localhost:18184' }, crypto: globalThis.crypto } },

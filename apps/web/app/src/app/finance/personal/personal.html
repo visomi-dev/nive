@@ -43,7 +43,7 @@
     }
   </section>
 
-  @if (agent.connected() || (local() && (!requested() || setup() === 'agent'))) {
+  @if (agent.connected() || (local() && !requested() && store.ready() && !store.ledger()?.runtimeInbox)) {
     <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="local-agent">
       <h2 appUI uiSize="md" id="local-agent" i18n="@@personalAgentHeading">Local agent</h2>
 
@@ -121,6 +121,10 @@
   }
 
   @if (store.ledger(); as ledger) {
+    @if (local() && (!requested() || setup() === 'agent' || ledger.runtimeInbox) && !agent.connected()) {
+      <app-runtime-inbox (applied)="showImportResult($event)" />
+    }
+
     @if (importResult(); as result) {
       <section appUI="card" layout="plain" class="space-y-3" aria-labelledby="import-result-title">
         <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="import-result-title" i18n="@@onboardingImportSaved">

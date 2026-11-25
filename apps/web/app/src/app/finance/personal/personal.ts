@@ -25,6 +25,7 @@ import { NavigationHeading } from '../../shared/navigation-heading';
 import { Button, Card, Heading, Input, LinkButton, Select, Text } from '../../ui';
 
 import { ImportReview } from './import-review/import-review';
+import { RuntimeInbox } from './runtime-inbox/runtime-inbox';
 import { LocalImport } from './local-import/local-import';
 import { LedgerStore } from './ledger-store';
 import { LocalAgent, type ImportProposal } from './local-agent';
@@ -34,6 +35,7 @@ import { LocalAgent, type ImportProposal } from './local-agent';
   imports: [
     ImportReview,
     LocalImport,
+    RuntimeInbox,
     BringMovements,
     NavigationHeading,
     Button,

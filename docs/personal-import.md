@@ -42,10 +42,10 @@ locked vault before continuing.
 
 1. Configure the local `nive` MCP entry in Codex as shown in the [runtime guide](personal-runtime.md).
    Set its `NIVE_WEB_ORIGIN` to `http://localhost:18184` and start a Codex session on the same
-   computer as the Nive tab. Open your vault with a PRF-capable passkey. Enter the one-time
-   pairing code from the private runtime directory, select the **import** permission and confirm
-   consent. If you closed the tab or the connection timed out, restart the runtime for a new code.
-   The connection and grants belong to the live tab. The setup URL holds only the step.
+   computer as the Nive tab. Open your vault with a PRF-capable passkey. In **Local import inbox**,
+   enter the one-time code from the private runtime directory, confirm consent and pair. Then
+   click **Authorize inbox for 15 minutes**. You can close the tab during this window. Keep
+   Codex and the runtime running. The setup URL holds only the step.
 2. Select the CSV, XML, XLSX and PDF in Codex. In the tested Codex CLI, start in the fixture
    directory, type `@` and select each file from the file picker. This references local files in
    the chat. Codex can use local document readers for spreadsheets and text PDFs. An image-only PDF
@@ -59,7 +59,7 @@ locked vault before continuing.
    > charge. Keep its UUID and the row, sheet or page references. Flag uncertainty. Use the
    > Nive import tool and leave the decision to me.
 
-4. In Nive review each account and its future budget lines. Adjust the month, category, limit or
+4. Return to Nive and unlock the vault if needed, then review each account and its future budget lines. Adjust the month, category, limit or
    historical months, or clear **Include in plan** for a line. The edit control labels limits in
    minor units and displays the currency amount. For each row choose a posting, skip it, or link
    its evidence to a proposed or existing movement. Confirm the direction of the CFDI and link it
@@ -72,9 +72,10 @@ locked vault before continuing.
    stationery. Future limits are editable estimates and do not post future movements.
 6. Ask Codex to retry the identical payload with the same request ID. It should receive
    `applied`. Refresh and unlock the vault to verify persistence. For a negative test, reject
-   a fresh proposal and retry it in the same enrollment to see `rejected`. Try locking the
-   vault or revoking the connection with a proposal open. A proposal lives at most five minutes
-   and the enrollment at most fifteen. Restart the MCP process to pair again after revocation.
+   a fresh proposal and retry it during the same authorization to see `rejected`. Lock the
+   vault to confirm that review is suspended, or revoke the installation to discard a pending
+   proposal. Intake expires after 15 minutes. An already prepared proposal survives runtime
+   restart as ciphertext until reviewed or revoked. Restart to get a fresh code after revocation.
 7. Stop the gateway, close Codex and remove this fixture's disposable services and volume
    using `podman compose -p "$project" -f "$fixture" down --volumes` in the original shell.
    Removing the throwaway browser profile also removes the synthetic browser vault.
@@ -120,8 +121,9 @@ tests use an official SDK client on stdio.
 
 ## Remaining work
 
-The current browser holds the vault key and must stay open. Unattended runtime enrollment, a
-standalone financial CLI, cross-device sync, the wider finance domain and the managed-agent
+The browser holds the financial vault key. The local runtime can receive structured proposals
+in a separate encrypted inbox during an explicitly authorized window. Detached ledger access,
+a standalone financial CLI, cross-device sync, the wider finance domain and the managed-agent
 harness remain separate work. Budget lines in this slice represent monthly expense limits by
 account and category. No OCR, bank connection, managed Railway agent or Private Files access was
 part of acceptance.

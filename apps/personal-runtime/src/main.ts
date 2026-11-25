@@ -16,6 +16,7 @@ import {
 } from '@nive/finance';
 import { z } from 'zod';
 
+import { RuntimeInbox } from './inbox';
 import { Broker } from './broker';
 import { startLoopback } from './loopback';
 
@@ -72,7 +73,7 @@ async function main(): Promise<void> {
       void rm(path, { force: true }).catch(() => undefined);
     }
   });
-  const stopListener = await startLoopback(broker, origin);
+  const { inbox, stop: stopListener } = await startLoopback(broker, origin, () => new RuntimeInbox(directory));
   const temp = join(directory, randomBytes(12).toString('hex'));
 
   try {
@@ -98,6 +99,7 @@ async function main(): Promise<void> {
       stopping = true;
       clearTimeout(expires);
       broker.close();
+      inbox.lock();
       stopListener();
       void server.close().catch(() => undefined);
     }
@@ -113,7 +115,21 @@ async function main(): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
     const capability = toolCapabilities.get(params.name);
     const call = runtimeCall.safeParse({ capability, input: params.arguments ?? {} });
-    const result = await (call.success ? broker.invoke(call.data) : Promise.resolve({ error: 'invalid' }));
+    let result: Awaited<ReturnType<Broker['invoke']>> = { error: 'invalid' };
+
+    if (call.success) {
+      try {
+        if (inbox.enrolled()) {
+          result = inbox.invoke(call.data);
+        } else {
+          const browserResult = await broker.invoke(call.data);
+
+          result = browserResult;
+        }
+      } catch {
+        result = { error: 'unavailable' };
+      }
+    }
 
     return {
       isError: 'error' in result,

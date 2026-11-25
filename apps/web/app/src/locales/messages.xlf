@@ -3763,16 +3763,16 @@
         <source>Choose a CSV of transactions or a CFDI 4.0 XML file after opening your vault. Nive reads it on this device.</source>
       </trans-unit>
       <trans-unit id="onboardingAgentRuntime" datatype="html">
-        <source>Start Codex with the Nive MCP runtime configured. Keep this Nive tab and the runtime open on the same computer.</source>
+        <source>Start Codex with the Nive MCP runtime configured on the same computer as this tab.</source>
       </trans-unit>
       <trans-unit id="onboardingAgentPair" datatype="html">
-        <source>Open your vault, enter the one-time pairing code from the local runtime, and grant import permission.</source>
+        <source>Open your vault, pair the local import inbox with the one-time code, then authorize it for 15 minutes.</source>
       </trans-unit>
       <trans-unit id="onboardingAgentFiles" datatype="html">
         <source>Attach your files in your Codex chat and ask it to prepare an import in Nive. Codex and its model provider process the attachments. Review the proposed batch in Nive. The files stay in the chat.</source>
       </trans-unit>
       <trans-unit id="onboardingAgentReconnect" datatype="html">
-        <source>To resume after closing this tab or after the connection expires, restart the runtime and use a new pairing code.</source>
+        <source>To review after closing this tab, return and unlock your vault. If authorization expires, grant a new one to send another proposal.</source>
       </trans-unit>
       <trans-unit id="onboardingImportOptions" datatype="html">
         <source>Import options</source>
@@ -3803,6 +3803,48 @@
       </trans-unit>
       <trans-unit id="onboardingReference" datatype="html">
         <source>Reference</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxTitle" datatype="html">
+        <source>Local import inbox</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxScope" datatype="html">
+        <source>Pair the local runtime running on this computer. Codex can submit import proposals when this tab is closed during an active 15-minute authorization. The runtime can access only its encrypted inbox. Review and approve in Nive.</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxDevice" datatype="html">
+        <source>Installation <x id="INTERPOLATION" equiv-text="{{ enrollment.id }}"/></source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRevokePending" datatype="html">
+        <source>Revoked in this vault. If the runtime was offline, retry revocation when it is available.</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxAuthorized" datatype="html">
+        <source>The latest authorization ends at <x id="INTERPOLATION" equiv-text="{{ deadline | date: 'shortTime' }}"/>. You can close the tab and return to review the proposal.</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxLocked" datatype="html">
+        <source>The runtime needs a new authorization to accept proposals.</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxAuthorize" datatype="html">
+        <source>Authorize inbox for 15 minutes</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRefresh" datatype="html">
+        <source>Check for proposals</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRevoke" datatype="html">
+        <source>Revoke this installation</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxCode" datatype="html">
+        <source>Inbox pairing code</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxConsent" datatype="html">
+        <source>I trust this installation to receive import proposals. Codex and its provider process the files I select in the chat.</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxPair" datatype="html">
+        <source>Pair import inbox</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxReconnect" datatype="html">
+        <source>Check paired installation</source>
+      </trans-unit>
+      <trans-unit id="runtimeInboxError" datatype="html">
+        <source>Check the runtime, pairing code, and open vault. Your saved state is kept for retry.</source>
       </trans-unit>
     </body>
   </file>

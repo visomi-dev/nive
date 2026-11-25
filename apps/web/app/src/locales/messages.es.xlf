@@ -2163,20 +2163,20 @@
         <target>Abre tu bóveda y elige un CSV de movimientos o un archivo XML CFDI 4.0. Nive lo lee en este dispositivo.</target>
       </trans-unit>
       <trans-unit id="onboardingAgentRuntime" datatype="html">
-        <source>Start Codex with the Nive MCP runtime configured. Keep this Nive tab and the runtime open on the same computer.</source>
-        <target>Inicia Codex con el runtime MCP de Nive configurado. Mantén esta pestaña de Nive y el runtime abiertos en la misma computadora.</target>
+        <source>Start Codex with the Nive MCP runtime configured on the same computer as this tab.</source>
+        <target>Inicia Codex con el MCP de Nive configurado en el mismo equipo que esta pestaña.</target>
       </trans-unit>
       <trans-unit id="onboardingAgentPair" datatype="html">
-        <source>Open your vault, enter the one-time pairing code from the local runtime, and grant import permission.</source>
-        <target>Abre tu bóveda, escribe el código de vinculación de un solo uso del runtime local y concede el permiso de importación.</target>
+        <source>Open your vault, pair the local import inbox with the one-time code, then authorize it for 15 minutes.</source>
+        <target>Abre tu bóveda, vincula el buzón local de importación con el código de un solo uso y autorízalo por 15 minutos.</target>
       </trans-unit>
       <trans-unit id="onboardingAgentFiles" datatype="html">
         <source>Attach your files in your Codex chat and ask it to prepare an import in Nive. Codex and its model provider process the attachments. Review the proposed batch in Nive. The files stay in the chat.</source>
         <target>Adjunta tus archivos al chat de Codex y pídele que prepare una importación en Nive. Codex y el proveedor de su modelo procesan los archivos. Revisa el lote propuesto en Nive. Los archivos se quedan en el chat.</target>
       </trans-unit>
       <trans-unit id="onboardingAgentReconnect" datatype="html">
-        <source>To resume after closing this tab or after the connection expires, restart the runtime and use a new pairing code.</source>
-        <target>Para retomar después de cerrar esta pestaña o de que venza la conexión, reinicia el runtime y usa un código de vinculación nuevo.</target>
+        <source>To review after closing this tab, return and unlock your vault. If authorization expires, grant a new one to send another proposal.</source>
+        <target>Si cierras esta pestaña, vuelve y desbloquea tu bóveda para revisar. Si la autorización vence, concede otra para enviar una nueva propuesta.</target>
       </trans-unit>
       <trans-unit id="onboardingImportOptions" datatype="html">
         <source>Import options</source>
@@ -2217,6 +2217,62 @@
       <trans-unit id="onboardingReference" datatype="html">
         <source>Reference</source>
         <target>Referencia</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxTitle" datatype="html">
+        <source>Local import inbox</source>
+        <target>Buzón local de importación</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxScope" datatype="html">
+        <source>Pair the local runtime running on this computer. Codex can submit import proposals when this tab is closed during an active 15-minute authorization. The runtime can access only its encrypted inbox. Review and approve in Nive.</source>
+        <target>Vincula el runtime local que se ejecuta en este equipo. Codex puede enviar propuestas de importación con esta pestaña cerrada mientras esté activa una autorización de 15 minutos. El runtime solo puede acceder a su buzón cifrado. Revisa y aprueba en Nive.</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxDevice" datatype="html">
+        <source>Installation <x id="INTERPOLATION" equiv-text="{{ enrollment.id }}"/></source>
+        <target>Instalación <x id="INTERPOLATION" equiv-text="{{ enrollment.id }}"/></target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRevokePending" datatype="html">
+        <source>Revoked in this vault. If the runtime was offline, retry revocation when it is available.</source>
+        <target>Revocaste el acceso en esta bóveda. Si el runtime estaba desconectado, vuelve a intentar revocarlo cuando esté disponible.</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxAuthorized" datatype="html">
+        <source>The latest authorization ends at <x id="INTERPOLATION" equiv-text="{{ deadline | date: 'shortTime' }}"/>. You can close the tab and return to review the proposal.</source>
+        <target>La última autorización vence a las <x id="INTERPOLATION" equiv-text="{{ deadline | date: 'shortTime' }}"/>. Puedes cerrar la pestaña y volver para revisar la propuesta.</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxLocked" datatype="html">
+        <source>The runtime needs a new authorization to accept proposals.</source>
+        <target>El runtime necesita una nueva autorización para aceptar propuestas.</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxAuthorize" datatype="html">
+        <source>Authorize inbox for 15 minutes</source>
+        <target>Autorizar el buzón por 15 minutos</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRefresh" datatype="html">
+        <source>Check for proposals</source>
+        <target>Buscar propuestas</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxRevoke" datatype="html">
+        <source>Revoke this installation</source>
+        <target>Revocar esta instalación</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxCode" datatype="html">
+        <source>Inbox pairing code</source>
+        <target>Código de vinculación del buzón</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxConsent" datatype="html">
+        <source>I trust this installation to receive import proposals. Codex and its provider process the files I select in the chat.</source>
+        <target>Confío en que esta instalación reciba propuestas de importación. Codex y su proveedor procesan los archivos que selecciono en el chat.</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxPair" datatype="html">
+        <source>Pair import inbox</source>
+        <target>Vincular el buzón de importación</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxReconnect" datatype="html">
+        <source>Check paired installation</source>
+        <target>Comprobar la instalación vinculada</target>
+      </trans-unit>
+      <trans-unit id="runtimeInboxError" datatype="html">
+        <source>Check the runtime, pairing code, and open vault. Your saved state is kept for retry.</source>
+        <target>Comprueba el runtime, el código de vinculación y que la bóveda esté abierta. Puedes volver a intentar con tu estado guardado.</target>
       </trans-unit>
     </body>
   </file>

@@ -1,16 +1,18 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { runtimePort } from '@nive/finance';
+import { bearer, runtimePort } from '@nive/finance';
 
 import type { Broker } from './broker';
+import type { RuntimeInbox } from './inbox';
 
 const host = '127.0.0.1';
 
-export async function startLoopback(broker: Broker, origin: string) {
+export async function startLoopback(broker: Broker, origin: string, openInbox: () => RuntimeInbox) {
+  let inbox: RuntimeInbox;
   const server = createServer(
     { requestTimeout: 6000, headersTimeout: 4000, keepAliveTimeout: 1000 },
     (request, response) => {
-      void handle(request, response, broker, origin).catch(() => send(response, 400));
+      void handle(request, response, broker, inbox, origin).catch(() => send(response, 400));
     },
   );
 
@@ -22,13 +24,30 @@ export async function startLoopback(broker: Broker, origin: string) {
     });
   });
 
-  return () => {
+  const stop = () => {
     server.close();
     server.closeAllConnections();
   };
+
+  try {
+    // The listener owns the port before loading durable state.
+    inbox = openInbox();
+
+    return { inbox, stop };
+  } catch (error) {
+    stop();
+
+    throw error;
+  }
 }
 
-async function handle(request: IncomingMessage, response: ServerResponse, broker: Broker, origin: string) {
+async function handle(
+  request: IncomingMessage,
+  response: ServerResponse,
+  broker: Broker,
+  inbox: RuntimeInbox,
+  origin: string,
+) {
   if (request.headers.host !== host + ':' + runtimePort || request.headers.origin !== origin) {
     send(response, 403);
 
@@ -39,7 +58,19 @@ async function handle(request: IncomingMessage, response: ServerResponse, broker
   response.setHeader('Vary', 'Origin');
   const route = request.url;
 
-  if (!['/pair', '/next', '/reply', '/revoke'].includes(route ?? '')) {
+  if (
+    ![
+      '/pair',
+      '/next',
+      '/reply',
+      '/revoke',
+      '/inbox/pair',
+      '/inbox/authorize',
+      '/inbox/status',
+      '/inbox/finish',
+      '/inbox/revoke',
+    ].includes(route ?? '')
+  ) {
     send(response, 404);
 
     return;
@@ -65,7 +96,31 @@ async function handle(request: IncomingMessage, response: ServerResponse, broker
   const value = await body(request);
 
   if (route === '/pair') {
-    send(response, broker.pair(authorization, value) ? 204 : 403);
+    send(response, !inbox.enrolled() && broker.pair(authorization, value) ? 204 : 403);
+  } else if (route === '/inbox/pair') {
+    if (broker.canPair(authorization) && inbox.pair(value)) {
+      broker.expirePairing();
+      send(response, 204);
+    } else {
+      send(response, 403);
+    }
+  } else if (route === '/inbox/authorize') {
+    const key = bearer.safeParse(value);
+
+    send(response, key.success && inbox.authorize(authorization, key.data) ? 204 : 403);
+  } else if (route === '/inbox/status') {
+    const status = inbox.status(authorization);
+
+    send(response, status ? 200 : 403, status);
+  } else if (route === '/inbox/revoke') {
+    if (inbox.revoke(authorization)) {
+      broker.close();
+      send(response, 204);
+    } else {
+      send(response, 403);
+    }
+  } else if (route === '/inbox/finish') {
+    send(response, inbox.finish(authorization, value) ? 204 : 403);
   } else if (route === '/reply') {
     send(response, broker.reply(authorization, value) ? 204 : 403);
   } else if (route === '/revoke') {

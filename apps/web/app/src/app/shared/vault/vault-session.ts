@@ -59,6 +59,7 @@ export class VaultSession {
 
   private observedVersion = this.session.operationVersion();
   private epoch = 0;
+  private activity: ReturnType<typeof watchVaultActivity> | undefined;
   private locked = new AbortController();
   private removeCancellation: (() => void) | undefined;
 
@@ -70,7 +71,8 @@ export class VaultSession {
     return selection &&
       this.session.full() &&
       selection.ownerId === this.session.user()?.id &&
-      selection.version === this.session.operationVersion()
+      selection.version === this.session.operationVersion() &&
+      !this.activity?.expired()
       ? this.phase()
       : 'locked';
   });
@@ -100,7 +102,8 @@ export class VaultSession {
       !this.session.cancellation().aborted &&
       this.observedVersion === this.session.operationVersion() &&
       Boolean(this.bindings.get(id) && wrappingAad(this.bindings.get(id)!) === wrappingAad(context)) &&
-      this.scopes.get(id)?.state === 'ready'
+      this.scopes.get(id)?.state === 'ready' &&
+      !this.activity?.expired()
     );
   }
 
@@ -339,6 +342,8 @@ export class VaultSession {
   }
 
   lock(broadcast = true): void {
+    this.activity?.stop();
+    this.activity = undefined;
     this.invalidate();
     this.cleartext.set('');
     this.phase.set('locked');
@@ -514,6 +519,10 @@ export class VaultSession {
   }
 
   private identity(ownerId: string) {
+    if (this.activity?.expired()) {
+      this.lock(false);
+    }
+
     if (!this.session.full() || this.session.user()?.id !== ownerId || this.session.cancellation().aborted) {
       this.lock();
 
@@ -532,7 +541,7 @@ export class VaultSession {
   private active() {
     const selected = this.selected();
 
-    if (!selected || this.state() !== 'ready') {
+    if (!selected || this.activity?.expired() || this.state() !== 'ready') {
       throw new VaultError('locked');
     }
 
@@ -557,6 +566,7 @@ export class VaultSession {
   private current(epoch: number, session: { ownerId: string; version: number; signal: AbortSignal }): boolean {
     return (
       epoch === this.epoch &&
+      !this.activity?.expired() &&
       !session.signal.aborted &&
       this.session.full() &&
       session.ownerId === this.session.user()?.id &&
@@ -591,7 +601,13 @@ export class VaultSession {
 
   private readonly idleLock = effect((cleanup) => {
     if (this.openCustody()) {
-      cleanup(watchVaultActivity(this.document, () => this.lock(false)));
+      const activity = watchVaultActivity(this.document, () => this.lock(false));
+
+      this.activity = activity;
+      cleanup(() => {
+        activity.stop();
+        this.activity = undefined;
+      });
     }
   });
 

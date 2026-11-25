@@ -198,13 +198,19 @@ describe('isolated PostgreSQL authentication persistence', () => {
     const sid = randomUUID();
     const data = payload();
 
-    data.cookie.expires = new Date(Date.now() + 24 * 60 * 60_000);
+    data.cookie.expires = new Date(Date.now() + 60 * 24 * 60 * 60_000);
 
     await save(store, sid, data);
 
     const [bounded] = await resource.db.select().from(sessions).where(eq(sessions.sid, sid));
 
-    expect(bounded.expire.getTime() - bounded.createdAt.getTime()).toBeLessThanOrEqual(8 * 60 * 60_000);
+    expect(bounded.expire.getTime() - bounded.createdAt.getTime()).toBe(30 * 24 * 60 * 60_000);
+
+    await save(store, sid, data);
+
+    const [updated] = await resource.db.select().from(sessions).where(eq(sessions.sid, sid));
+
+    expect(updated.expire).toEqual(bounded.expire);
 
     await resource.db
       .update(sessions)

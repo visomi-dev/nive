@@ -47,7 +47,7 @@ export function authConfig(input: {
     secure: origin.protocol === 'https:',
     cookieName: origin.protocol === 'https:' ? '__Host-visomi.sid' : 'visomi.sid',
     flowMaxAge: 10 * 60_000,
-    sessionMaxAge: 8 * 60 * 60_000,
+    sessionMaxAge: 30 * 24 * 60 * 60_000,
     challengeMaxAge: 3 * 60_000,
     freshMaxAge: 5 * 60_000,
   });

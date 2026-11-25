@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -145,6 +145,125 @@ it('uses official stdio client and permits only authorized requests against a li
     });
   } finally {
     await client.close();
+
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+it('persists an import over official stdio and restores its ciphertext after restarting the process', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'nive-mcp-inbox-'));
+  const channel = randomBytes(32).toString('hex');
+  const key = randomBytes(32).toString('hex');
+  const pair = { id: randomUUID(), channel, keyProof: createHash('sha256').update(key).digest('hex') };
+  const batch = {
+    requestId: randomUUID(),
+    groups: [
+      {
+        account: null,
+        budgets: [],
+        rows: [
+          {
+            kind: 'expense',
+            currency: 'MXN',
+            date: '2026-11-18',
+            amountMinor: '900',
+            note: 'Synthetic station cafe',
+            category: null,
+            needsReview: true,
+            source: { format: 'csv', row: 2 },
+          },
+        ],
+      },
+    ],
+  };
+  const connect = async () => {
+    const client = new Client({ name: 'nive-inbox-test', version: '1.0.0' });
+
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [resolve(import.meta.dirname, '../../../dist/apps/personal-runtime/main.mjs')],
+        env: { NIVE_RUNTIME_DIR: dir, NIVE_WEB_ORIGIN: origin },
+        stderr: 'pipe',
+      }),
+    );
+
+    return client;
+  };
+
+  let client: Client | undefined;
+
+  try {
+    const started = await connect();
+
+    client = started;
+    const pairingFile = await readFile(join(dir, 'pairing-code'), 'utf8');
+    const code = pairingFile.trim();
+    const badOrigin = await post('/inbox/pair', code, pair, 'http://localhost:18582');
+    const paired = await post('/inbox/pair', code, pair);
+    const repeatedCode = await post('/inbox/pair', code, pair);
+
+    expect(badOrigin.status).toBe(403);
+    expect(paired.status).toBe(204);
+    expect(repeatedCode.status).toBe(403);
+
+    await expect(client.callTool({ name: 'nive_prepare_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { error: 'locked' },
+    });
+
+    const granted = await post('/inbox/authorize', channel, key);
+
+    expect(granted.status).toBe(204);
+
+    await expect(
+      client.callTool({ name: 'nive_financial_summary', arguments: { month: '2026-11' } }),
+    ).resolves.toMatchObject({
+      structuredContent: { error: 'permission_denied' },
+    });
+
+    await expect(client.callTool({ name: 'nive_prepare_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { proposalId: batch.requestId, status: 'pending' },
+    });
+
+    await expect(client.callTool({ name: 'nive_approve_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { error: 'invalid' },
+    });
+
+    await client.close();
+
+    const restarted = await connect();
+
+    client = restarted;
+
+    await expect(client.callTool({ name: 'nive_prepare_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { error: 'locked' },
+    });
+
+    const status = await post('/inbox/status', channel, {});
+    const payload: unknown = await status.json();
+
+    expect(payload).toMatchObject({ expiresAt: 0, proposal: { id: batch.requestId } });
+    expect(JSON.stringify(payload)).not.toContain('Synthetic station cafe');
+
+    const rejected = await post('/inbox/finish', channel, { id: batch.requestId, status: 'rejected' });
+    const reauthorized = await post('/inbox/authorize', channel, key);
+
+    expect(rejected.status).toBe(204);
+    expect(reauthorized.status).toBe(204);
+
+    await expect(client.callTool({ name: 'nive_prepare_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { proposalId: batch.requestId, status: 'rejected' },
+    });
+
+    const revoked = await post('/inbox/revoke', channel, {});
+
+    expect(revoked.status).toBe(204);
+
+    await expect(client.callTool({ name: 'nive_prepare_import', arguments: batch })).resolves.toMatchObject({
+      structuredContent: { error: 'revoked' },
+    });
+  } finally {
+    await client?.close();
 
     await rm(dir, { recursive: true, force: true });
   }

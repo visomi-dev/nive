@@ -54,11 +54,7 @@ export class LedgerStore {
 
   readonly configured = signal<boolean | null>(null);
 
-  readonly ready = computed(() => {
-    const binding = this.binding();
-
-    return Boolean(binding && this.vault.isSelected(binding) && this.vault.isOpen(binding));
-  });
+  readonly ready = computed(() => this.isReady());
   readonly ledger = computed(() => (this.ready() ? (this.contents()?.ledger ?? null) : null));
 
   async detect(): Promise<void> {
@@ -161,6 +157,22 @@ export class LedgerStore {
     this.contents.set(null);
   }
 
+  isReady(): boolean {
+    const binding = this.binding();
+
+    return Boolean(binding && this.vault.isSelected(binding) && this.vault.isOpen(binding));
+  }
+
+  requireReady(): void {
+    this.active();
+  }
+
+  guardReady(): () => boolean {
+    const binding = this.active();
+
+    return () => this.binding() === binding && this.isReady() && !this.lifetime.signal.aborted;
+  }
+
   async refresh(): Promise<Ledger> {
     const binding = this.active();
     const storage = await this.database.vault(binding.ownerId, this.lifetime.signal);
@@ -241,7 +253,7 @@ export class LedgerStore {
   private active(): WrappingContext {
     const binding = this.binding();
 
-    if (!binding || !this.ready() || this.lifetime.signal.aborted) {
+    if (!binding || !this.isReady() || this.lifetime.signal.aborted) {
       throw new VaultError('locked');
     }
 

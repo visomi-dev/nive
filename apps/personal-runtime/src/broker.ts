@@ -50,14 +50,7 @@ export class Broker {
   pair(authorization: string, input: unknown): boolean {
     const parsed = enrollment.safeParse(input);
 
-    if (
-      this.ended ||
-      this.channel ||
-      !this.pairingCode ||
-      this.now() >= this.pairUntil ||
-      !matches(this.pairingCode, authorization) ||
-      !parsed.success
-    ) {
+    if (!parsed.success || !this.canPair(authorization)) {
       return false;
     }
 
@@ -69,6 +62,16 @@ export class Broker {
     };
 
     return true;
+  }
+
+  canPair(authorization: string): boolean {
+    return Boolean(
+      !this.ended &&
+      !this.channel &&
+      this.pairingCode &&
+      this.now() < this.pairUntil &&
+      matches(this.pairingCode, authorization),
+    );
   }
 
   async invoke(call: RuntimeCall): Promise<RuntimeResult> {

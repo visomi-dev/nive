@@ -1,29 +1,33 @@
-/** Only interaction extends the deadline. Background timers may resume late. */
-export function watchVaultActivity(document: Document, lock: () => void): () => void {
+const idleMs = 5 * 60_000;
+
+/** The wall-clock deadline also applies when the browser suspends timers. */
+export function watchVaultActivity(document: Document, lock: () => void) {
   const view = document.defaultView;
 
   if (!view) {
-    return () => undefined;
+    return { expired: () => false, stop: () => undefined };
   }
 
-  const idleMs = 5 * 60_000;
-  let deadline = Date.now() + idleMs;
+  let wallDeadline = Date.now() + idleMs;
+  let monotonicDeadline = performance.now() + idleMs;
   let timer: number;
+  const remaining = () => Math.min(wallDeadline - Date.now(), monotonicDeadline - performance.now());
+  const expired = () => remaining() <= 0;
   const check = () => {
     view.clearTimeout(timer);
-    const remaining = deadline - Date.now();
 
-    if (remaining <= 0) {
+    if (expired()) {
       lock();
     } else {
-      timer = view.setTimeout(check, remaining);
+      timer = view.setTimeout(check, remaining());
     }
   };
-  const activity = () => {
-    if (Date.now() >= deadline) {
+  const activity = (event: Event) => {
+    if (expired()) {
       check();
-    } else {
-      deadline = Date.now() + idleMs;
+    } else if (event.isTrusted && document.visibilityState !== 'hidden') {
+      wallDeadline = Date.now() + idleMs;
+      monotonicDeadline = performance.now() + idleMs;
     }
   };
   const events = new AbortController();
@@ -32,11 +36,16 @@ export function watchVaultActivity(document: Document, lock: () => void): () => 
     document.addEventListener(type, activity, { passive: true, signal: events.signal });
   }
   view.addEventListener('pagehide', lock, { signal: events.signal });
+  view.addEventListener('pageshow', check, { signal: events.signal });
+  view.addEventListener('focus', check, { signal: events.signal });
   document.addEventListener('visibilitychange', check, { signal: events.signal });
   check();
 
-  return () => {
-    events.abort();
-    view.clearTimeout(timer);
+  return {
+    expired,
+    stop: () => {
+      events.abort();
+      view.clearTimeout(timer);
+    },
   };
 }

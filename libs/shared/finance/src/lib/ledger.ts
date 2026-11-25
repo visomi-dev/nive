@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { sha256 } from './digest';
+import { inboxEnrollment } from './runtime-inbox';
 
 // Nive v6 represents money as canonical signed minor-unit strings.
 export const currency = z.enum(['MXN', 'USD', 'EUR', 'JPY', 'KWD']);
@@ -74,6 +75,7 @@ export const periodBudget = budgetLine.extend({ accountId: z.uuid() });
 
 export const ledgerSchema = z.strictObject({
   version: z.literal(1),
+  runtimeInbox: inboxEnrollment.optional(),
   accounts: z.array(accountSchema).max(100),
   movements: z.array(movementRecord).max(1000),
   budgets: z.array(periodBudget).max(1200).default([]),

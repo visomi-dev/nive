@@ -2,7 +2,7 @@ import { join } from 'node:path';
 
 import { workspaceRoot } from '@nx/devkit';
 
-import { expect, signup, test, virtualPasskey } from './support/fixtures';
+import { expect, expireSession, signup, test, virtualPasskey } from './support/fixtures';
 
 test('applies only the reviewed local batch and keeps returning vaults out of first use', async ({ page }) => {
   await signup(page);
@@ -94,4 +94,67 @@ test('applies only the reviewed local batch and keeps returning vaults out of fi
   await expect(movements).toHaveCount(3);
 
   await expect(page.getByRole('heading', { name: 'Import in Nive', exact: true })).toHaveCount(0);
+});
+
+test('checks the vault deadline on return from a hidden tab and keeps account expiry separate', async ({ page }) => {
+  const email = await signup(page);
+
+  await virtualPasskey(page);
+
+  await page.getByRole('link', { name: 'Personal finances', exact: true }).click();
+
+  const create = page.getByRole('button', { name: 'Create personal vault with a passkey', exact: true });
+  const locked = page.getByRole('button', { name: 'Unlock with vault passkey', exact: true });
+  const open = page.getByRole('button', { name: 'Lock vault', exact: true });
+
+  await expect(create).toBeVisible();
+
+  await expect(locked).toHaveCount(0);
+
+  const now = Date.now();
+
+  await page.clock.install({ time: now });
+
+  await create.click();
+
+  await expect(open).toBeVisible();
+
+  // Model an inactive browser tab without advancing the browser's scheduled timeout callbacks.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await page.clock.setSystemTime(now + 4 * 60_000);
+
+  await expect(open).toBeVisible();
+
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown')));
+
+  await page.clock.setSystemTime(now + 5 * 60_000 + 1000);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await expect(locked).toBeVisible();
+
+  await expect(page).toHaveURL(/\/app\/en\/personal$/);
+
+  await expect(page.getByRole('region', { name: 'Movements' })).toHaveCount(0);
+
+  await locked.click();
+
+  await expect(open).toBeVisible();
+
+  await page.reload();
+
+  await expect(locked).toBeVisible();
+
+  await expireSession(email);
+
+  await page.reload();
+
+  await expect(page).toHaveURL(/\/auth\/sign-in\?returnTo=%2Fpersonal$/);
 });
