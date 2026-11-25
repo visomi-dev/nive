@@ -118,8 +118,9 @@ retention. The PostgreSQL, Redis and Jaeger mounts are required for startup.
 The declared services have one instance each and keep the inherited volume
 capacities. The bucket uses an authenticated HTTPS endpoint.
 
-The root Dockerfile builds the gateway, website, app and API together. The site
-uses `NIVE_PUBLIC_ORIGIN` at build time for canonical URLs and social metadata.
+The root Dockerfile builds the gateway, website, app and API together. Astro
+uses the canonical origin in its [site configuration](../apps/web/site/astro.config.mjs)
+for canonical URLs and social metadata.
 Railway watches the runtime apps and libraries, build inputs, brand assets,
 and IaC paths. Separate CI and documentation changes do not need a new image.
 The image supplies the gateway entrypoint, bind address and production mode.
@@ -163,8 +164,8 @@ require consent.
    Use the returned DNS records to update only the Nive hostname. Publish the
    CNAME in DNS-only mode and add the Railway verification TXT record. Wait
    for ownership verification and the HTTPS certificate. Keep this hostname
-   aligned with the auth settings, Angular SSR allowlist and build origin in
-   the IaC.
+   aligned with the auth settings and Angular SSR allowlist in the IaC and the
+   canonical origin in Astro.
 6. Confirm the gateway deployment SHA and health check at `/api/`. Railway
    runs `node libs/backend/db/tools/migrate.mjs` in a separate pre-deploy
    container using the final image and private database connection. If the

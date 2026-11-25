@@ -133,7 +133,6 @@ export default defineRailway((context) => {
       AUTH_ORIGIN: publicOrigin,
       AUTH_RP_ID: publicHost,
       NG_ALLOWED_HOSTS: publicHost,
-      NIVE_PUBLIC_ORIGIN: publicOrigin,
       SESSION_SECRET: { generator: secretGenerator },
       // One Railway HTTP ingress and only trusted private-network callers.
       AUTH_TRUST_PROXY: '1-hop',

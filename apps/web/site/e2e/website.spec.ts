@@ -276,6 +276,7 @@ test('the privacy section retains readable contrast in both themes', async ({ pa
 });
 
 test('the legacy English help URL and localized social cards remain available', async ({ page, request }) => {
+  const publicOrigin = 'https://nive.visomi.dev';
   const homepage = await request.get('/', { maxRedirects: 0 });
 
   expect(homepage.status()).toBe(302);
@@ -287,7 +288,7 @@ test('the legacy English help URL and localized social cards remain available', 
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('A good place to start.');
 
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/en\/help\/$/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', publicOrigin + '/en/help/');
 
   const iconPath = await page.locator('link[rel="icon"]').first().getAttribute('href');
   const legacyIcon = await request.get('/favicon.svg');
@@ -306,7 +307,7 @@ test('the legacy English help URL and localized social cards remain available', 
     const image = page.locator('meta[property="og:image"]');
     const asset = '/images/seo/' + locale + '/home.png';
 
-    await expect(image).toHaveAttribute('content', new RegExp(asset + '$'));
+    await expect(image).toHaveAttribute('content', publicOrigin + asset);
 
     const response = await request.get(asset);
 
