@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { securityHeaders } from './security-headers';
 
-function headers(production?: boolean, nonce = false, google = false, wasm = false) {
+function headers(production?: boolean, nonce = false, google = false, wasm = false, localConnectSource?: string) {
   const values = new Map<string, string>();
   const response = {
     locals: {} as Record<string, string>,
@@ -12,7 +12,11 @@ function headers(production?: boolean, nonce = false, google = false, wasm = fal
   };
   const next = vi.fn();
 
-  securityHeaders({ production, nonce, google, wasm })({} as Request, response as unknown as Response, next);
+  securityHeaders({ production, nonce, google, wasm, localConnectSource })(
+    {} as Request,
+    response as unknown as Response,
+    next,
+  );
 
   return { values, next, response };
 }
@@ -56,6 +60,19 @@ describe('shared Helmet policy', () => {
 
     expect(values.has('strict-transport-security')).toBe(false);
     expect(values.get('content-security-policy')).not.toContain('upgrade-insecure-requests');
+  });
+
+  it('only adds the configured local connection to the existing browser policy', () => {
+    const loopback = 'http://127.0.0.1:43871';
+    const isolated = headers(false, true, false, true, loopback).values.get('content-security-policy');
+    const withGoogle = headers(false, true, true, true, loopback).values.get('content-security-policy');
+    const normal = headers(true, true, true).values.get('content-security-policy');
+
+    expect(isolated?.split(';')).toContain("connect-src 'self' " + loopback);
+    expect(isolated).not.toContain('accounts.google.com');
+    expect(withGoogle?.split(';')).toContain("connect-src 'self' https://accounts.google.com/gsi/ " + loopback);
+    expect(withGoogle).toContain("script-src-attr 'none'");
+    expect(normal).not.toContain(loopback);
   });
 
   it('enables production HTTPS policy for the current host', () => {

@@ -229,20 +229,15 @@ export class VaultSession {
   }
 
   async readEnvelope(envelope: DataEnvelope, display = true): Promise<void> {
-    const current = this.active();
-    const clear = await current.vault.decrypt(envelope.context, envelope);
-
-    try {
-      if (!this.current(current.epoch, current.session)) {
-        throw new VaultError('stale-operation');
-      }
-
+    await this.consumeEnvelope(envelope, (clear) => {
       if (display) {
         this.cleartext.set(new TextDecoder('utf-8', { fatal: true }).decode(clear));
       }
-    } finally {
-      clear.fill(0);
-    }
+    });
+  }
+
+  readTextEnvelope(envelope: DataEnvelope): Promise<string> {
+    return this.consumeEnvelope(envelope, (clear) => new TextDecoder('utf-8', { fatal: true }).decode(clear));
   }
 
   localBinding(key: KeyDomain, localPasskey = false): Promise<WrappingContext | undefined> {
@@ -352,6 +347,21 @@ export class VaultSession {
     }
     for (const device of this.devices.values()) {
       device.lock();
+    }
+  }
+
+  private async consumeEnvelope<T>(envelope: DataEnvelope, consume: (clear: Uint8Array) => T): Promise<T> {
+    const current = this.active();
+    const clear = await current.vault.decrypt(envelope.context, envelope);
+
+    try {
+      if (!this.current(current.epoch, current.session)) {
+        throw new VaultError('stale-operation');
+      }
+
+      return consume(clear);
+    } finally {
+      clear.fill(0);
     }
   }
 

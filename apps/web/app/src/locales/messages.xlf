@@ -3527,6 +3527,162 @@
           <context context-type="linenumber">33,37</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="personalFinanceTitle" datatype="html">
+        <source> Personal finances </source>
+      </trans-unit>
+      <trans-unit id="personalTotalIncome" datatype="html">
+        <source>Income</source>
+      </trans-unit>
+      <trans-unit id="personalTotalExpense" datatype="html">
+        <source>Expenses</source>
+      </trans-unit>
+      <trans-unit id="personalPageTitle" datatype="html">
+        <source>Personal finances</source>
+      </trans-unit>
+      <trans-unit id="personalVaultPrivacy" datatype="html">
+        <source> This workspace is encrypted and stays in this browser. Unlock it separately with your vault passkey. </source>
+      </trans-unit>
+      <trans-unit id="personalVaultHeading" datatype="html">
+        <source>Personal vault</source>
+      </trans-unit>
+      <trans-unit id="personalVaultLock" datatype="html">
+        <source>Lock vault</source>
+      </trans-unit>
+      <trans-unit id="personalVaultUnlock" datatype="html">
+        <source>Unlock with vault passkey</source>
+      </trans-unit>
+      <trans-unit id="personalVaultCreate" datatype="html">
+        <source>Create personal vault with a passkey</source>
+      </trans-unit>
+      <trans-unit id="personalAgentHeading" datatype="html">
+        <source>Local agent</source>
+      </trans-unit>
+      <trans-unit id="personalAgentConnected" datatype="html">
+        <source>Connected for this tab. The connection expires after 15 minutes.</source>
+      </trans-unit>
+      <trans-unit id="personalAgentRevoke" datatype="html">
+        <source>Revoke agent connection</source>
+      </trans-unit>
+      <trans-unit id="personalAgentCode" datatype="html">
+        <source>Local runtime pairing code</source>
+      </trans-unit>
+      <trans-unit id="personalAgentRead" datatype="html">
+        <source>Share account names, balances and monthly income and expense totals.</source>
+      </trans-unit>
+      <trans-unit id="personalAgentPrepare" datatype="html">
+        <source>Let the agent prepare movements for my review.</source>
+      </trans-unit>
+      <trans-unit id="personalAgentConsent" datatype="html">
+        <source>I understand my agent and its model provider may receive the financial data I allow it to read.</source>
+      </trans-unit>
+      <trans-unit id="personalAgentAuthorize" datatype="html">
+        <source>Authorize local agent</source>
+      </trans-unit>
+      <trans-unit id="personalAccounts" datatype="html">
+        <source>Accounts and balances</source>
+      </trans-unit>
+      <trans-unit id="personalAccountName" datatype="html">
+        <source>Account name</source>
+      </trans-unit>
+      <trans-unit id="personalAccountCurrency" datatype="html">
+        <source>Currency</source>
+      </trans-unit>
+      <trans-unit id="personalAccountOpening" datatype="html">
+        <source>Opening amount</source>
+      </trans-unit>
+      <trans-unit id="personalAccountAdd" datatype="html">
+        <source>Add account</source>
+      </trans-unit>
+      <trans-unit id="personalAccountEmpty" datatype="html">
+        <source>Add an account to get started.</source>
+      </trans-unit>
+      <trans-unit id="personalReviewHeading" datatype="html">
+        <source>Review a proposed movement</source>
+      </trans-unit>
+      <trans-unit id="personalReviewDescription" datatype="html">
+        <source>Edit the proposal, then review the exact values before approving.</source>
+      </trans-unit>
+      <trans-unit id="personalMovementKind" datatype="html">
+        <source>Movement type</source>
+      </trans-unit>
+      <trans-unit id="personalMovementExpense" datatype="html">
+        <source>Expense</source>
+      </trans-unit>
+      <trans-unit id="personalMovementIncome" datatype="html">
+        <source>Income</source>
+      </trans-unit>
+      <trans-unit id="personalMovementTransfer" datatype="html">
+        <source>Transfer</source>
+      </trans-unit>
+      <trans-unit id="personalMovementAccount" datatype="html">
+        <source>Source account</source>
+      </trans-unit>
+      <trans-unit id="personalTransferAccount" datatype="html">
+        <source>Destination account for transfers</source>
+      </trans-unit>
+      <trans-unit id="personalSelectAccount" datatype="html">
+        <source>Select an account</source>
+      </trans-unit>
+      <trans-unit id="personalMovementAmount" datatype="html">
+        <source>Amount</source>
+      </trans-unit>
+      <trans-unit id="personalMovementDate" datatype="html">
+        <source>Date</source>
+      </trans-unit>
+      <trans-unit id="personalMovementNote" datatype="html">
+        <source>Note</source>
+      </trans-unit>
+      <trans-unit id="personalReviewValues" datatype="html">
+        <source> Review exact values </source>
+      </trans-unit>
+      <trans-unit id="personalConfirmKind" datatype="html">
+        <source>Type</source>
+      </trans-unit>
+      <trans-unit id="personalConfirmAccount" datatype="html">
+        <source>Account</source>
+      </trans-unit>
+      <trans-unit id="personalConfirmDestination" datatype="html">
+        <source>Destination</source>
+      </trans-unit>
+      <trans-unit id="personalApprove" datatype="html">
+        <source> Approve and save movement </source>
+      </trans-unit>
+      <trans-unit id="personalReject" datatype="html">
+        <source> Reject proposal </source>
+      </trans-unit>
+      <trans-unit id="personalMovements" datatype="html">
+        <source>Movements</source>
+      </trans-unit>
+      <trans-unit id="personalSummaryMonth" datatype="html">
+        <source>Summary month</source>
+      </trans-unit>
+      <trans-unit id="personalMovementsEmpty" datatype="html">
+        <source>No movements yet.</source>
+      </trans-unit>
+      <trans-unit id="personalActionError" datatype="html">
+        <source>The action could not be completed. Check your input, passkey, vault and connection.</source>
+      </trans-unit>
+      <trans-unit id="personalSaved" datatype="html">
+        <source>Saved in your personal vault.</source>
+      </trans-unit>
+      <trans-unit id="personalRejected" datatype="html">
+        <source>Proposal rejected.</source>
+      </trans-unit>
+      <trans-unit id="personalKindIncome" datatype="html">
+        <source>Income</source>
+      </trans-unit>
+      <trans-unit id="personalKindExpense" datatype="html">
+        <source>Expense</source>
+      </trans-unit>
+      <trans-unit id="personalKindTransfer" datatype="html">
+        <source>Transfer</source>
+      </trans-unit>
+      <trans-unit id="personalAgentGrantedRead" datatype="html">
+        <source>Can read accounts and monthly totals.</source>
+      </trans-unit>
+      <trans-unit id="personalAgentGrantedPrepare" datatype="html">
+        <source>Can prepare movements for review.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

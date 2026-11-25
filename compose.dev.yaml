@@ -9,6 +9,7 @@ services:
       NX_DAEMON: 'false'
       NX_ISOLATE_PLUGINS: 'false'
       HUSKY: '0'
+      NIVE_LOCAL_AGENT: ${NIVE_LOCAL_AGENT:-0}
     ports:
       - '127.0.0.1:${MAILPIT_PORT:-18025}:8025'
     volumes:

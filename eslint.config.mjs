@@ -228,6 +228,7 @@ export default [
           'newlines-between': 'always',
           // Classify workspace source aliases consistently from root hooks and project-level Nx tasks.
           pathGroups: [
+            { pattern: '@nive/finance', group: 'external' },
             { pattern: '@visomi-stack/dev-testing{,/**}', group: 'external' },
             { pattern: '@visomi-stack/backend-{db,shared}{,/**}', group: 'external' },
             { pattern: '@visomi-stack/shared-db', group: 'external' },

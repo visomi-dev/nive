@@ -236,7 +236,12 @@ export class IndexedDbVaultStorage implements VaultStorage {
     return result.data.envelope;
   }
 
-  async putUnit(id: string, expectedRevision: number, envelope: DataEnvelope): Promise<void> {
+  async putUnit(
+    id: string,
+    expectedRevision: number,
+    envelope: DataEnvelope,
+    beforeCommit?: () => void,
+  ): Promise<void> {
     const parsed = dataEnvelopeSchema.safeParse(envelope);
 
     if (
@@ -249,6 +254,8 @@ export class IndexedDbVaultStorage implements VaultStorage {
     }
 
     await this.change<StoredUnit>('units', id, (current) => {
+      beforeCommit?.();
+
       if (current && (!storedUnitSchema.safeParse(current).success || current.id !== id)) {
         throw new VaultError('corrupt');
       }
