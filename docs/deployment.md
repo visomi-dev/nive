@@ -111,12 +111,18 @@ configuration, outside the public documentation.
 [The Railway definition](../.railway/railway.ts) manages one gateway, private
 PostgreSQL, authenticated private Redis, private Jaeger and the private
 `private-files` S3 bucket. PostgreSQL stores authentication and application
-state. Redis carries realtime messages and persists writes with AOF. The bucket
+state. Redis carries transient realtime messages over Pub/Sub. The bucket
 stores Vault backup objects and files. Jaeger receives authenticated traces
 from the gateway and stores them in Badger with the configured 48-hour
-retention. The PostgreSQL, Redis and Jaeger mounts are required for startup.
-The declared services have one instance each and keep the inherited volume
-capacities. The bucket uses an authenticated HTTPS endpoint.
+retention. The declared services have one instance each and keep their
+attached volumes and inherited capacities. The bucket uses an authenticated
+HTTPS endpoint.
+
+Redis starts as UID 999 through the image's entrypoint in `/tmp`, with AOF
+and RDB snapshots disabled. The attached `/data` volume is retained. On the
+initial rollout the entrypoint found `lost+found` on the volume and skipped
+ownership repair. Redis then failed to open its AOF directory. The Pub/Sub
+service now uses `/tmp` and sets `SKIP_FIX_PERMS=1`.
 
 The root Dockerfile builds the gateway, website, app and API together. Astro
 uses the canonical origin in its [site configuration](../apps/web/site/astro.config.mjs)
@@ -143,16 +149,16 @@ require consent.
    railway config plan --out "$nive_plan_dir/plan.json"
    ```
 
-3. Before the first approved apply, create the two
-   [shared receiver variables](#railway-receiver-credentials) in production
-   and regenerate the redacted plan against that state. Review the new plan
-   with the previously approved changes. Both Jaeger and the gateway require
-   the values at their first startup.
+3. Before the first approved rollout, provision any missing
+   [service credentials](#railway-service-credentials) and the two
+   [shared receiver variables](#railway-receiver-credentials) in production.
+   Regenerate the redacted plan against that state. PostgreSQL, Redis, Jaeger
+   and the gateway require their credentials at first startup.
 4. After approval, apply the reviewed plan with
    `railway config apply --plan "$nive_plan_dir/plan.json" --yes`. Replan and
-   review again if the target or source changed. Railway generates the
-   PostgreSQL password, Redis password and session secret and supplies the
-   bucket connection through credential references. Manage optional SMTP or
+   review again if the target or source changed. The plan preserves the
+   PostgreSQL password, Redis password and session secret. Railway supplies
+   the bucket connection through credential references. Manage optional SMTP or
    Google credentials in Railway variables. Outbound SMTP needs
    [Railway Pro or above](https://docs.railway.com/networking/outbound-networking#email-delivery).
    Verify PostgreSQL, Redis and Jaeger have private endpoints and no public
@@ -185,6 +191,27 @@ Record which capabilities were exercised together with the CI run, deployment
 ID, SHA and smoke result. Avoid publishing raw HTTP logs, headers, exceptions,
 traces or credentials.
 
+The smoke check validates the HTTP status and media type before parsing
+JSON. A network failure or HTTP 5xx fails the check. The gateway returns
+HTTP 404 JSON for denied or missing static resources and HTTP 400 JSON for
+invalid path encoding. The optional edge Worker includes
+`x-nive-path-guard: rejected` on its own HTTP 400 response. The smoke reports
+a confirmed edge rejection only once that response also meets the full
+HTTP 400 JSON contract. Use a direct gateway run to check the application's
+malformed path handling.
+
+During the initial public smoke on November 25, 2026, the operator observed a
+plain-text HTTP 502 where a probe expected JSON 404. Website, API and public
+sign-in had responded normally. At review time, DNS pointed directly to the
+Railway custom domain target. The gateway's deployment-scoped HTTP logs
+contained ordinary successful and 404 responses, with no matching 502 or
+synthetic path record in the available sample. The layer that produced the
+502 remains unconfirmed. To investigate the occurrence, correlate its
+existing request ID and timestamp with Railway's response details and
+upstream fields. An edge routing header identifies the POP that handled a
+request and is insufficient for attributing the rejection.
+[Railway HTTP logs](https://docs.railway.com/cli/logs#http-logs)
+
 For later releases, let Railway deploy the CI-verified push to `main` and
 repeat the smoke check. If a release must be rolled back, select the previous
 successful gateway deployment in Railway after checking compatibility with the
@@ -192,6 +219,27 @@ applied database migrations. An image rollback leaves the database schema and
 volume in place. On the first release there is no prior Nive deployment to
 restore. Pause gateway autodeploys and restore the saved Nive DNS records if
 the cutover must be undone.
+
+#### Railway service credentials
+
+The initial IaC bootstrap sent the generator expression as a literal value
+for the three credentials below. The production values have been corrected.
+The IaC declares them with `preserve()` so future plans leave the stored
+values in place. The planner cannot provision a missing preserved value.
+
+For a fresh environment, create the service slots ahead of the first rollout.
+Use each service's Railway **Variables** tab to enter the missing credentials
+before enabling its deployment. Generate strong random values in an approved
+password manager. Use URL-safe passwords, such as hex-encoded random bytes,
+for the two connection URI references. The session secret requires at least
+32 bytes.
+
+- `Postgres` uses `POSTGRES_PASSWORD`.
+- `Redis` uses `REDIS_PASSWORD`.
+- `web-gateway` uses `SESSION_SECRET`.
+
+Use Railway's secret storage and verify that the next redacted plan has no
+updates to these keys. Existing values belong to their deployment environment.
 
 #### Railway receiver credentials
 
