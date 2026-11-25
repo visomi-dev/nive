@@ -3471,13 +3471,6 @@
           <context context-type="linenumber">5,7</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="firstUseContinue" datatype="html">
-        <source>Continue to Nive</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
-          <context context-type="linenumber">7,10</context>
-        </context-group>
-      </trans-unit>
       <trans-unit id="firstUseExampleTitle" datatype="html">
         <source>Explore an example</source>
         <context-group purpose="location">
@@ -3497,34 +3490,6 @@
         <context-group purpose="location">
           <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
           <context context-type="linenumber">17,21</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="firstUseBudgetTitle" datatype="html">
-        <source>Plan your first budget</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
-          <context context-type="linenumber">22,24</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="firstUseBudgetDescription" datatype="html">
-        <source> A budget helps plan your income and expenses. Creating a budget is not available yet. </source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
-          <context context-type="linenumber">25,29</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="firstUseImportTitle" datatype="html">
-        <source>Bring in your records</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
-          <context context-type="linenumber">30,32</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="firstUseImportDescription" datatype="html">
-        <source> Start with records you already have when import becomes available. </source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">apps/web/app/src/app/onboarding/welcome/welcome.html</context>
-          <context context-type="linenumber">33,37</context>
         </context-group>
       </trans-unit>
       <trans-unit id="personalFinanceTitle" datatype="html">
@@ -3778,6 +3743,66 @@
       </trans-unit>
       <trans-unit id="importAlreadyApplied" datatype="html">
         <source>This batch is already in the vault.</source>
+      </trans-unit>
+      <trans-unit id="onboardingBring" datatype="html">
+        <source>Bring my transactions</source>
+      </trans-unit>
+      <trans-unit id="onboardingReviewFirst" datatype="html">
+        <source>Choose how to prepare a batch. You review and approve it in Nive before it is saved.</source>
+      </trans-unit>
+      <trans-unit id="onboardingLocal" datatype="html">
+        <source>Import in Nive</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgent" datatype="html">
+        <source>Use my agent</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentUnavailable" datatype="html">
+        <source>The agent connection requires the desktop local preview. You can import in Nive on this device.</source>
+      </trans-unit>
+      <trans-unit id="onboardingLocalFiles" datatype="html">
+        <source>Choose a CSV of transactions or a CFDI 4.0 XML file after opening your vault. Nive reads it on this device.</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentRuntime" datatype="html">
+        <source>Start Codex with the Nive MCP runtime configured. Keep this Nive tab and the runtime open on the same computer.</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentPair" datatype="html">
+        <source>Open your vault, enter the one-time pairing code from the local runtime, and grant import permission.</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentFiles" datatype="html">
+        <source>Attach your files in your Codex chat and ask it to prepare an import in Nive. Codex and its model provider process the attachments. Review the proposed batch in Nive. The files stay in the chat.</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentReconnect" datatype="html">
+        <source>To resume after closing this tab or after the connection expires, restart the runtime and use a new pairing code.</source>
+      </trans-unit>
+      <trans-unit id="onboardingImportOptions" datatype="html">
+        <source>Import options</source>
+      </trans-unit>
+      <trans-unit id="onboardingManual" datatype="html">
+        <source>Start without files</source>
+      </trans-unit>
+      <trans-unit id="onboardingCheckingVault" datatype="html">
+        <source>Checking your vault…</source>
+      </trans-unit>
+      <trans-unit id="onboardingRetryVault" datatype="html">
+        <source>Check vault again</source>
+      </trans-unit>
+      <trans-unit id="onboardingAgentUnlock" datatype="html">
+        <source>Open your personal vault to grant import permission.</source>
+      </trans-unit>
+      <trans-unit id="onboardingImportSaved" datatype="html">
+        <source>Import complete</source>
+      </trans-unit>
+      <trans-unit id="onboardingAccounts" datatype="html">
+        <source>Accounts</source>
+      </trans-unit>
+      <trans-unit id="onboardingBudgets" datatype="html">
+        <source>Budgets</source>
+      </trans-unit>
+      <trans-unit id="onboardingNoChanges" datatype="html">
+        <source>No accounts, movements or budgets changed.</source>
+      </trans-unit>
+      <trans-unit id="onboardingReference" datatype="html">
+        <source>Reference</source>
       </trans-unit>
     </body>
   </file>

@@ -30,16 +30,22 @@ env -i PATH="$PATH" NODE_ENV=development NIVE_LOCAL_AGENT=1 HOST=127.0.0.1 PORT=
   SMTP_ALLOW_INSECURE_LOCAL=true node dist/apps/web/gateway/main.js
 ```
 
-Open `http://localhost:18184/app/en/personal` (or `/app/es/personal`). Create a synthetic account
-using an `example.test` email. Retrieve its verification code from the loopback Mailpit web port
-printed above. Create the personal vault using a PRF-capable passkey. Keep this tab open.
+Create a synthetic account at `http://localhost:18184/app/en/auth/sign-up` (or
+`/app/es/auth/sign-up`) using an `example.test` email. Retrieve its verification code from the
+loopback Mailpit port printed above. On the welcome page select **Bring my transactions**.
+Choose **Import in Nive** for CSV or CFDI files on this device, or **Use my agent** on the desktop
+local preview. **Start without files** leaves the guided steps. You can return through
+**Personal finances**. Reloading the setup URL restores the selected step. Restore access to a
+locked vault before continuing.
 
 ## Select documents in Codex
 
 1. Configure the local `nive` MCP entry in Codex as shown in the [runtime guide](personal-runtime.md).
-   Set its `NIVE_WEB_ORIGIN` to `http://localhost:18184`. Start a new Codex session. In the Nive
-   tab enter the single-use code from the private runtime directory, select the **import** permission
-   and confirm. An import does not require the grant to read account names or balances.
+   Set its `NIVE_WEB_ORIGIN` to `http://localhost:18184` and start a Codex session on the same
+   computer as the Nive tab. Open your vault with a PRF-capable passkey. Enter the one-time
+   pairing code from the private runtime directory, select the **import** permission and confirm
+   consent. If you closed the tab or the connection timed out, restart the runtime for a new code.
+   The connection and grants belong to the live tab. The setup URL holds only the step.
 2. Select the CSV, XML, XLSX and PDF in Codex. In the tested Codex CLI, start in the fixture
    directory, type `@` and select each file from the file picker. This references local files in
    the chat. Codex can use local document readers for spreadsheets and text PDFs. An image-only PDF

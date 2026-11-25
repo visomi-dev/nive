@@ -1,11 +1,23 @@
 <section class="min-w-0 space-y-6">
   <header class="space-y-2">
-    <h1 appUI appNavigationHeading i18n="@@personalPageTitle">Personal finances</h1>
+    <h1 appUI appNavigationHeading [appHeadingFocus]="requested() === null" i18n="@@personalPageTitle">
+      Personal finances
+    </h1>
 
     <p appUI tone="muted" i18n="@@personalVaultPrivacy">
       This workspace is encrypted and stays in this browser. Unlock it separately with your vault passkey.
     </p>
   </header>
+
+  @if (setup(); as step) {
+    <app-bring-movements [step]="step" [supported]="local()" />
+  } @else if (requested() && !store.ledger()) {
+    <a appUI="button" variant="secondary" routerLink="/personal" i18n="@@onboardingManual">Start without files</a>
+  } @else if (emptyWorkspace() && !importResult()) {
+    <a appUI="button" routerLink="/personal" [queryParams]="{ setup: 'choose' }" i18n="@@onboardingBring">
+      Bring my transactions
+    </a>
+  }
 
   <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-vault">
     <h2 appUI uiSize="md" id="personal-vault" i18n="@@personalVaultHeading">Personal vault</h2>
@@ -21,11 +33,17 @@
         <button appUI type="button" [disabled]="busy()" (click)="open()" i18n="@@personalVaultCreate">
           Create personal vault with a passkey
         </button>
+      } @else if (busy()) {
+        <p role="status" i18n="@@onboardingCheckingVault">Checking your vault…</p>
+      } @else {
+        <button appUI type="button" variant="secondary" (click)="detectVault()" i18n="@@onboardingRetryVault">
+          Check vault again
+        </button>
       }
     }
   </section>
 
-  @if (local()) {
+  @if (agent.connected() || (local() && (!requested() || setup() === 'agent'))) {
     <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="local-agent">
       <h2 appUI uiSize="md" id="local-agent" i18n="@@personalAgentHeading">Local agent</h2>
 
@@ -51,7 +69,7 @@
         <button appUI type="button" variant="secondary" (click)="agent.revoke()" i18n="@@personalAgentRevoke">
           Revoke agent connection
         </button>
-      } @else {
+      } @else if (!setup() || store.ready()) {
         <form #pairForm (submit)="connect($event, pairForm)" class="grid gap-3">
           <label class="grid gap-1">
             <span i18n="@@personalAgentCode">Local runtime pairing code</span>
@@ -72,15 +90,17 @@
           </label>
 
           <label class="flex items-start gap-2">
-            <input name="import" type="checkbox" />
+            <input name="import" type="checkbox" [required]="setup() === 'agent'" />
 
             <span i18n="@@importGrant">Let the agent propose account, movement and budget imports for review.</span>
           </label>
 
-          <p i18n="@@importPrivacy">
-            Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither
-            forwards nor stores the original file.
-          </p>
+          @if (setup() !== 'agent') {
+            <p i18n="@@importPrivacy">
+              Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither
+              forwards nor stores the original file.
+            </p>
+          }
 
           <label class="flex items-start gap-2">
             <input name="consent" type="checkbox" required />
@@ -94,13 +114,75 @@
             Authorize local agent
           </button>
         </form>
+      } @else {
+        <p appUI tone="muted" i18n="@@onboardingAgentUnlock">Open your personal vault to grant import permission.</p>
       }
     </section>
   }
 
   @if (store.ledger(); as ledger) {
-    <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-accounts">
-      <h2 appUI uiSize="md" id="personal-accounts" i18n="@@personalAccounts">Accounts and balances</h2>
+    @if (importResult(); as result) {
+      <section appUI="card" layout="plain" class="space-y-3" aria-labelledby="import-result-title">
+        <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="import-result-title" i18n="@@onboardingImportSaved">
+          Import complete
+        </h2>
+
+        @if (result.accounts || result.movements || result.budgets) {
+          <div class="flex flex-wrap gap-2">
+            @if (result.accounts) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-accounts"
+                i18n="@@onboardingAccounts"
+              >
+                Accounts
+              </a>
+            }
+
+            @if (result.movements) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-movements"
+                i18n="@@personalMovements"
+              >
+                Movements
+              </a>
+            }
+
+            @if (result.budgets) {
+              <a
+                appUI="button"
+                variant="secondary"
+                routerLink="/personal"
+                queryParamsHandling="preserve"
+                fragment="personal-budgets"
+                i18n="@@onboardingBudgets"
+              >
+                Budgets
+              </a>
+            }
+          </div>
+        } @else {
+          <p appUI i18n="@@onboardingNoChanges">No accounts, movements or budgets changed.</p>
+        }
+      </section>
+    }
+
+    <section
+      [hidden]="!!setup()"
+      appUI="card"
+      padding="sm"
+      layout="plain"
+      class="space-y-3"
+      aria-labelledby="personal-accounts"
+    >
+      <h2 appUI uiSize="md" tabindex="-1" id="personal-accounts" i18n="@@personalAccounts">Accounts and balances</h2>
 
       <form #accountForm (submit)="createAccount($event, accountForm)" class="grid gap-3 sm:grid-cols-3">
         <label class="grid min-w-0 gap-1">
@@ -153,7 +235,11 @@
       />
     }
 
-    <app-local-import />
+    <app-local-import
+      [hidden]="setup() === 'choose' || setup() === 'agent'"
+      [expanded]="setup() === 'local'"
+      (applied)="showImportResult($event)"
+    />
 
     @if (agent.proposal(); as proposal) {
       @if (ledger.accounts.length) {
@@ -326,9 +412,9 @@
       }
     }
 
-    @if (ledger.budgets.length) {
+    @if (ledger.budgets.length && !setup()) {
       <section appUI="card" padding="sm" layout="plain" class="space-y-3">
-        <h2 appUI uiSize="md" i18n="@@importSavedBudget">Budget plan</h2>
+        <h2 appUI uiSize="md" id="personal-budgets" tabindex="-1" i18n="@@importSavedBudget">Budget plan</h2>
 
         <ul class="space-y-2">
           @for (line of ledger.budgets; track $index) {
@@ -359,8 +445,15 @@
       </section>
     }
 
-    <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-movements">
-      <h2 appUI uiSize="md" id="personal-movements" i18n="@@personalMovements">Movements</h2>
+    <section
+      appUI="card"
+      [hidden]="!!setup()"
+      padding="sm"
+      layout="plain"
+      class="space-y-3"
+      aria-labelledby="personal-movements"
+    >
+      <h2 appUI uiSize="md" tabindex="-1" id="personal-movements" i18n="@@personalMovements">Movements</h2>
 
       <label class="grid max-w-xs gap-1">
         <span i18n="@@personalSummaryMonth">Summary month</span>

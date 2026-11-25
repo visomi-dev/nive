@@ -65,8 +65,17 @@ export class LedgerStore {
     const ownerId = this.session.user()?.id;
 
     if (ownerId && this.session.full() && !this.lifetime.signal.aborted) {
-      const binding = await this.vault.localBinding(ledgerKey(ownerId));
+      const signal = AbortSignal.any([this.lifetime.signal, this.session.cancellation()]);
+      const key = ledgerKey(ownerId);
+      const binding = await this.vault.localBinding(key);
 
+      signal.throwIfAborted();
+
+      if (!binding) {
+        await this.requireEmptyVault(ownerId, key, signal);
+      }
+
+      signal.throwIfAborted();
       this.configured.set(Boolean(binding));
     }
   }
@@ -98,17 +107,8 @@ export class LedgerStore {
 
         selected = existing;
       } else {
-        const storage = await this.database.vault(ownerId, signal);
+        await this.requireEmptyVault(ownerId, key, signal);
 
-        try {
-          const unit = await storage.getUnit(vaultUnitId(ownerId, context(key, 1)));
-
-          if (unit) {
-            throw new VaultError('recovery-required');
-          }
-        } finally {
-          storage.close();
-        }
         const methodId = await createPrfCredential(
           {
             origin: view.location.origin,
@@ -219,6 +219,20 @@ export class LedgerStore {
 
       this.current(binding);
       this.publish({ ledger: updated, revision: savedRevision });
+    } finally {
+      storage.close();
+    }
+  }
+
+  private async requireEmptyVault(ownerId: string, key: KeyDomain, signal: AbortSignal): Promise<void> {
+    const storage = await this.database.vault(ownerId, signal);
+
+    try {
+      const unit = await storage.getUnit(vaultUnitId(ownerId, context(key, 1)));
+
+      if (unit) {
+        throw new VaultError('recovery-required');
+      }
     } finally {
       storage.close();
     }

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { importDigest, importInput, type ImportBatch, type ImportRow, type Ledger } from '@nive/finance';
 
 import { Button, Select } from '../../../ui';
@@ -11,7 +11,7 @@ import { columns, mapCsv, readCfdi, readCsv, type Mapping } from './import-files
   selector: 'app-local-import',
   imports: [Button, Select, ImportReview],
   template: `
-    <details>
+    <details [open]="expanded()">
       <summary i18n="@@importLocal">Import CSV or CFDI on this device</summary>
 
       @if (proposal(); as value) {
@@ -33,7 +33,7 @@ import { columns, mapCsv, readCfdi, readCsv, type Mapping } from './import-files
           <form #form class="grid gap-2 sm:grid-cols-3" (submit)="map($event, form)">
             @for (field of fields; track field) {
               <label
-                >{{ field
+                >{{ fieldLabels[field]
                 }}<select appUI [name]="field">
                   <option value="-1" i18n="@@importUnmapped">Unmapped</option>
 
@@ -77,6 +77,17 @@ export class LocalImport {
   protected readonly saved = signal(false);
 
   protected readonly fields = columns;
+  protected readonly fieldLabels = {
+    date: $localize`:@@personalMovementDate:Date`,
+    kind: $localize`:@@personalMovementKind:Movement type`,
+    amount: $localize`:@@personalMovementAmount:Amount`,
+    currency: $localize`:@@personalAccountCurrency:Currency`,
+    note: $localize`:@@personalMovementNote:Note`,
+    reference: $localize`:@@onboardingReference:Reference`,
+  };
+
+  readonly expanded = input(false);
+  readonly applied = output<{ before: Ledger; after: Ledger }>();
 
   protected async select(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
@@ -163,6 +174,7 @@ export class LocalImport {
 
       this.clear();
       this.saved.set(true);
+      this.applied.emit(value);
     } catch {
       this.error.set(true);
     } finally {

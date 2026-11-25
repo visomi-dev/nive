@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { emptyLedger } from '@nive/finance';
 
 import { Navigation } from '../../shared/navigation';
@@ -11,6 +12,7 @@ import { PersonalFinance } from './personal';
 it('keeps the open local importer mounted when an agent batch arrives', async () => {
   const proposal = signal<ImportProposal | null>(null);
 
+  TestBed.configureTestingModule({ providers: [provideRouter([])] });
   TestBed.overrideComponent(PersonalFinance, {
     set: {
       providers: [

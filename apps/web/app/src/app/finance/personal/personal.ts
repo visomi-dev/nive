@@ -1,5 +1,7 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   accountInput,
   addAccount,
@@ -18,8 +20,9 @@ import {
   type MovementInput,
 } from '@nive/finance';
 
+import { BringMovements, type ImportStep } from '../../onboarding/bring-movements/bring-movements';
 import { NavigationHeading } from '../../shared/navigation-heading';
-import { Button, Card, Heading, Input, Select, Text } from '../../ui';
+import { Button, Card, Heading, Input, LinkButton, Select, Text } from '../../ui';
 
 import { ImportReview } from './import-review/import-review';
 import { LocalImport } from './local-import/local-import';
@@ -28,21 +31,61 @@ import { LocalAgent, type ImportProposal } from './local-agent';
 
 @Component({
   selector: 'app-personal-finance',
-  imports: [ImportReview, LocalImport, NavigationHeading, Button, Card, Heading, Input, Select, Text],
+  imports: [
+    ImportReview,
+    LocalImport,
+    BringMovements,
+    NavigationHeading,
+    Button,
+    Card,
+    Heading,
+    Input,
+    LinkButton,
+    RouterLink,
+    Select,
+    Text,
+  ],
   providers: [LedgerStore, LocalAgent],
   templateUrl: './personal.html',
 })
 export class PersonalFinance {
   private readonly document = inject(DOCUMENT);
+  private readonly destroy = inject(DestroyRef);
+
+  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
+  private readonly desktop = signal(false);
+  private readonly previewEnabled = signal(false);
 
   protected readonly store = inject(LedgerStore);
   protected readonly agent = inject(LocalAgent);
 
-  protected readonly local = signal(false);
+  protected readonly importResult = signal<{ accounts: boolean; movements: boolean; budgets: boolean } | null>(null);
   protected readonly busy = signal(false);
   protected readonly feedback = signal<'error' | 'saved' | 'rejected' | null>(null);
   protected readonly month = signal('');
 
+  protected readonly local = computed(() => this.desktop() && this.previewEnabled());
+  protected readonly requested = computed((): ImportStep | null => {
+    const value = this.params()?.get('setup');
+
+    return value === 'choose' || value === 'local' || value === 'agent' ? value : null;
+  });
+  protected readonly emptyWorkspace = computed(() => {
+    const ledger = this.store.ledger();
+
+    return ledger
+      ? !ledger.accounts.length && !ledger.movements.length && !ledger.budgets.length
+      : this.store.configured() === false;
+  });
+  protected readonly setup = computed(() => {
+    const requested = this.requested();
+
+    if (!this.emptyWorkspace() || this.importResult()) {
+      return null;
+    }
+
+    return requested === 'agent' && !this.local() ? 'choose' : requested;
+  });
   protected readonly summary = computed(() => {
     const ledger = this.store.ledger();
     const month = period.safeParse(this.month());
@@ -76,9 +119,14 @@ export class PersonalFinance {
     void this.handle(() => this.store.open());
   }
 
+  protected detectVault(): void {
+    void this.handle(() => this.store.detect());
+  }
+
   protected lock(): void {
     this.store.lock();
     this.reviewed.set(null);
+    this.importResult.set(null);
     this.feedback.set(null);
   }
 
@@ -115,7 +163,12 @@ export class PersonalFinance {
     event.preventDefault();
     const input = new FormData(form);
 
-    if (!event.isTrusted || !input.has('consent')) {
+    if (
+      !event.isTrusted ||
+      !this.local() ||
+      !input.has('consent') ||
+      (this.setup() === 'agent' && (!this.store.ready() || !input.has('import')))
+    ) {
       return;
     }
 
@@ -215,7 +268,15 @@ export class PersonalFinance {
     void this.handle(async () => {
       await this.agent.approveImport(proposal, value.before, value.after);
 
-      this.feedback.set('saved');
+      this.showImportResult(value);
+    });
+  }
+
+  protected showImportResult({ before, after }: { before: Ledger; after: Ledger }): void {
+    this.importResult.set({
+      accounts: JSON.stringify(before.accounts) !== JSON.stringify(after.accounts),
+      movements: JSON.stringify(before.movements) !== JSON.stringify(after.movements),
+      budgets: JSON.stringify(before.budgets) !== JSON.stringify(after.budgets),
     });
   }
 
@@ -253,11 +314,40 @@ export class PersonalFinance {
     }
   }
 
+  private async detectAgentPreview(): Promise<void> {
+    try {
+      const response = await fetch('/api/personal/local-agent', { cache: 'no-store', redirect: 'error' });
+
+      if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+        const config: unknown = await response.json();
+
+        if (!this.destroy.destroyed) {
+          this.previewEnabled.set(
+            Boolean(config && typeof config === 'object' && 'enabled' in config && config.enabled === true),
+          );
+        }
+      }
+    } catch {
+      // A missing preview leaves local file import available.
+    }
+  }
+
   private readonly initialize = afterNextRender(() => {
-    this.local.set(Boolean(localWebOrigin(this.document.defaultView?.location.origin)));
+    const view = this.document.defaultView;
+
+    if (localWebOrigin(view?.location.origin) && view?.PublicKeyCredential) {
+      const desktop = view.matchMedia('(min-width: 48rem) and (any-pointer: fine)');
+      const update = () => this.desktop.set(desktop.matches);
+
+      update();
+      desktop.addEventListener('change', update);
+      this.destroy.onDestroy(() => desktop.removeEventListener('change', update));
+      void this.detectAgentPreview();
+    }
+
     const today = new Date();
 
     this.month.set(today.getFullYear().toString() + '-' + String(today.getMonth() + 1).padStart(2, '0'));
-    void this.handle(() => this.store.detect());
+    this.detectVault();
   });
 }

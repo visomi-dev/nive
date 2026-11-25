@@ -9,7 +9,7 @@ import { VaultSession } from '../../shared/vault/vault-session';
 
 import { LedgerStore } from './ledger-store';
 
-async function setup() {
+async function setup(open = true) {
   const ownerId = 'f3fb5025-6b05-4450-b65a-c9c5cfcd40ab';
   const accountId = 'b9d75762-922a-4525-96dc-2d34448ad465';
   const externalChange = addAccount(emptyLedger(), accountId, {
@@ -20,7 +20,7 @@ async function setup() {
   let saved: Ledger | undefined;
   const storage = { getUnit: vi.fn(), putUnit: vi.fn(), close: vi.fn() };
   const vault = {
-    localBinding: async (key: KeyDomain) => ({ key, ownerId, method: 'passkey-prf' }),
+    localBinding: vi.fn(async (key: KeyDomain) => (open ? { key, ownerId, method: 'passkey-prf' } : undefined)),
     connect: vi.fn(),
     lockContext: vi.fn(),
     isSelected: () => true,
@@ -63,7 +63,9 @@ async function setup() {
   });
   const store = TestBed.inject(LedgerStore);
 
-  await store.open();
+  if (open) {
+    await store.open();
+  }
 
   return { store, storage, externalSave, externalChange };
 }
@@ -101,4 +103,28 @@ it('refreshes after a concurrent write wins the revision check', async () => {
 
   expect(store.ledger()).toEqual(externalChange);
   expect(storage.putUnit).toHaveBeenCalledTimes(1);
+});
+
+it('leaves first-use state unknown when a saved snapshot has no local binding', async () => {
+  const { store, externalSave } = await setup(false);
+
+  externalSave();
+
+  await expect(store.detect()).rejects.toMatchObject({ code: 'recovery-required' });
+
+  expect(store.configured()).toBeNull();
+});
+
+it('distinguishes a vault read error from an empty workspace', async () => {
+  const { store, storage } = await setup(false);
+
+  storage.getUnit.mockRejectedValueOnce(new VaultError('unavailable'));
+
+  await expect(store.detect()).rejects.toMatchObject({ code: 'unavailable' });
+
+  expect(store.configured()).toBeNull();
+
+  await store.detect();
+
+  expect(store.configured()).toBe(false);
 });

@@ -32,6 +32,8 @@ export function createGatewayApp(options: {
   localAgentOrigin?: string;
 }) {
   const examples = options.api.exampleApiVersion === 1;
+  const agentOrigin = localWebOrigin(options.localAgentOrigin);
+  const localHost = agentOrigin ? new URL(agentOrigin).host : undefined;
   const app = express();
   const errors = pageErrors(options.site?.clientDirectory);
 
@@ -53,8 +55,6 @@ export function createGatewayApp(options: {
       google: options.auth?.googleEnabled === true,
     };
     const applicationHeaders = securityHeaders(applicationPolicy);
-    const agentOrigin = localWebOrigin(options.localAgentOrigin);
-    const localHost = agentOrigin ? new URL(agentOrigin).host : undefined;
     const localHeaders = localHost
       ? securityHeaders({ ...applicationPolicy, localConnectSource: runtimeUrl })
       : applicationHeaders;
@@ -157,6 +157,12 @@ export function createGatewayApp(options: {
       }
     }, options.auth.middleware);
     app.use(authentication);
+  }
+
+  if (localHost && (options.helmetMode ?? 'managed') === 'managed') {
+    app.get('/api/personal/local-agent', (request, response) =>
+      response.set('cache-control', 'no-store').json({ enabled: request.get('host') === localHost }),
+    );
   }
 
   app.use(

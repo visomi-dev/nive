@@ -1,6 +1,6 @@
 import { type ApplicationConfig } from '@angular/core';
 import { provideClientHydration, withI18nSupport, withHttpTransferCacheOptions } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { appRoutes } from './app.routes';
 
@@ -12,6 +12,6 @@ export const appConfig: ApplicationConfig = {
         filter: (request) => !/\/(?:auth|example)\//.test(request.url),
       }),
     ),
-    provideRouter(appRoutes),
+    provideRouter(appRoutes, withInMemoryScrolling({ anchorScrolling: 'enabled' })),
   ],
 };

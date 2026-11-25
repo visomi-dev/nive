@@ -1,0 +1,88 @@
+<section appUI="card" layout="plain" class="space-y-4" aria-labelledby="bring-movements-title">
+  @switch (step()) {
+    @case ('choose') {
+      <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="bring-movements-title" i18n="@@onboardingBring">
+        Bring my transactions
+      </h2>
+
+      <p appUI tone="muted" i18n="@@onboardingReviewFirst">
+        Choose how to prepare a batch. You review and approve it in Nive before it is saved.
+      </p>
+
+      <div class="flex flex-wrap gap-2">
+        <a appUI="button" routerLink="/personal" [queryParams]="{ setup: 'local' }" i18n="@@onboardingLocal">
+          Import in Nive
+        </a>
+
+        @if (supported()) {
+          <a
+            appUI="button"
+            variant="secondary"
+            routerLink="/personal"
+            [queryParams]="{ setup: 'agent' }"
+            i18n="@@onboardingAgent"
+          >
+            Use my agent
+          </a>
+        }
+      </div>
+
+      @if (!supported()) {
+        <p appUI tone="muted" i18n="@@onboardingAgentUnavailable">
+          The agent connection requires the desktop local preview. You can import in Nive on this device.
+        </p>
+      }
+    }
+    @case ('local') {
+      <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="bring-movements-title" i18n="@@onboardingLocal">
+        Import in Nive
+      </h2>
+
+      <p appUI tone="muted" i18n="@@onboardingLocalFiles">
+        Choose a CSV of transactions or a CFDI 4.0 XML file after opening your vault. Nive reads it on this device.
+      </p>
+    }
+    @case ('agent') {
+      <h2 appUI appNavigationHeading [appHeadingFocus]="true" id="bring-movements-title" i18n="@@onboardingAgent">
+        Use my agent
+      </h2>
+
+      <ol class="list-decimal space-y-2 ps-5">
+        <li i18n="@@onboardingAgentRuntime">
+          Start Codex with the Nive MCP runtime configured. Keep this Nive tab and the runtime open on the same
+          computer.
+        </li>
+
+        <li i18n="@@onboardingAgentPair">
+          Open your vault, enter the one-time pairing code from the local runtime, and grant import permission.
+        </li>
+
+        <li i18n="@@onboardingAgentFiles">
+          Attach your files in your Codex chat and ask it to prepare an import in Nive. Codex and its model provider
+          process the attachments. Review the proposed batch in Nive. The files stay in the chat.
+        </li>
+      </ol>
+
+      <p appUI tone="muted" i18n="@@onboardingAgentReconnect">
+        To resume after closing this tab or after the connection expires, restart the runtime and use a new pairing
+        code.
+      </p>
+    }
+  }
+
+  <div class="flex flex-wrap gap-2">
+    @if (step() !== 'choose') {
+      <a
+        appUI="button"
+        variant="secondary"
+        routerLink="/personal"
+        [queryParams]="{ setup: 'choose' }"
+        i18n="@@onboardingImportOptions"
+      >
+        Import options
+      </a>
+    }
+
+    <a appUI="button" variant="secondary" routerLink="/personal" i18n="@@onboardingManual">Start without files</a>
+  </div>
+</section>

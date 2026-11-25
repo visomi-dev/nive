@@ -1,4 +1,4 @@
-import { createServer, get } from 'node:http';
+import { createServer, get, type IncomingHttpHeaders } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { once } from 'node:events';
 
@@ -46,22 +46,35 @@ it('scopes the additional CSP source to app documents on the selected local orig
 
   try {
     const address = server.address() as AddressInfo;
-    const policy = (path: string, host: string) =>
-      new Promise<string | undefined>((resolve, reject) => {
+    const getFromHost = (path: string, host: string) =>
+      new Promise<{ headers: IncomingHttpHeaders; body: string }>((resolve, reject) => {
         const request = get({ host: '127.0.0.1', port: address.port, path, headers: { Host: host } }, (response) => {
-          response.resume();
-          resolve(response.headers['content-security-policy'] as string | undefined);
+          let body = '';
+
+          response.setEncoding('utf8');
+          response.on('data', (chunk: string) => {
+            body += chunk;
+          });
+          response.once('end', () => resolve({ headers: response.headers, body }));
+          response.once('error', reject);
         });
 
         request.once('error', reject);
       });
-    const local = await policy('/app', 'localhost:8080');
-    const foreign = await policy('/app/en/personal', 'localhost:8081');
-    const nonApp = await policy('/api/', 'localhost:8080');
+    const local = await getFromHost('/app', 'localhost:8080');
+    const foreign = await getFromHost('/app/en/personal', 'localhost:8081');
+    const nonApp = await getFromHost('/api/', 'localhost:8080');
 
-    expect(local).toContain(loopback);
-    expect(foreign).not.toContain(loopback);
-    expect(nonApp).not.toContain(loopback);
+    expect(local.headers['content-security-policy']).toContain(loopback);
+    expect(foreign.headers['content-security-policy']).not.toContain(loopback);
+    expect(nonApp.headers['content-security-policy']).not.toContain(loopback);
+
+    const enabled = await getFromHost('/api/personal/local-agent', 'localhost:8080');
+    const disabled = await getFromHost('/api/personal/local-agent', 'localhost:8081');
+
+    expect(enabled.headers['cache-control']).toBe('no-store');
+    expect(JSON.parse(enabled.body)).toEqual({ enabled: true });
+    expect(JSON.parse(disabled.body)).toEqual({ enabled: false });
   } finally {
     server.close();
     server.closeAllConnections();
