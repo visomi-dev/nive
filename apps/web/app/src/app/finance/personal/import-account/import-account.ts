@@ -15,9 +15,8 @@ import {
   type ReviewedRow,
 } from '@nive/finance';
 
-import { Button, Card, Input, Select } from '../../ui';
-
-import { LedgerStore } from './ledger-store';
+import { Button, Card, Input, Select } from '../../../ui';
+import { LedgerStore } from '../ledger-store';
 
 type DraftRow = {
   id: string;

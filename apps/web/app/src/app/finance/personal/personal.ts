@@ -21,8 +21,8 @@ import {
 import { NavigationHeading } from '../../shared/navigation-heading';
 import { Button, Card, Heading, Input, Select, Text } from '../../ui';
 
-import { ImportReview } from './import-review';
-import { LocalImport } from './local-import';
+import { ImportReview } from './import-review/import-review';
+import { LocalImport } from './local-import/local-import';
 import { LedgerStore } from './ledger-store';
 import { LocalAgent, type ImportProposal } from './local-agent';
 

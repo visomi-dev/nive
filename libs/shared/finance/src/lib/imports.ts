@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { sha256 } from './digest';
 import {
   accountInput,
   addAccount,
@@ -50,11 +51,8 @@ export const importInput = z
   .refine((batch) => batch.groups.reduce((sum, group) => sum + group.rows.length, 0) <= 50);
 export type ImportBatch = z.infer<typeof importInput>;
 
-export async function importDigest(batch: ImportBatch): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify(importInput.parse(batch).groups));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+export function importDigest(batch: ImportBatch): Promise<string> {
+  return sha256(JSON.stringify(importInput.parse(batch).groups));
 }
 
 function sameReference(left: ImportSource, right: ImportSource): boolean {
@@ -66,12 +64,27 @@ function sameReference(left: ImportSource, right: ImportSource): boolean {
 }
 
 export function importMatches(ledger: Ledger, accountId: string, row: ImportRow) {
-  return ledger.movements.filter(
-    ({ movement, sources }) =>
-      movement.accountId === accountId &&
-      (sources?.some((source) => sameReference(source, row.source)) ||
-        (movement.kind !== 'transfer' && movement.amountMinor === row.amountMinor && movement.date === row.date)),
-  );
+  const account = ledger.accounts.find((item) => item.id === accountId);
+
+  return ledger.movements.filter(({ movement, sources, category }) => {
+    if (movement.accountId !== accountId) {
+      return false;
+    }
+
+    if (row.source.format === 'cfdi') {
+      return (
+        row.currency === account?.currency &&
+        movement.kind === row.kind &&
+        movement.amountMinor === row.amountMinor &&
+        (!row.category || !category || row.category === category)
+      );
+    }
+
+    return (
+      Boolean(sources?.some((source) => sameReference(source, row.source))) ||
+      (movement.kind !== 'transfer' && movement.amountMinor === row.amountMinor && movement.date === row.date)
+    );
+  });
 }
 
 export type ImportDecision = { action: 'post' | 'skip' | 'link'; targetId?: string };

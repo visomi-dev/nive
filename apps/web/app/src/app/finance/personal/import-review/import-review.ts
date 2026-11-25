@@ -1,9 +1,8 @@
 import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 import { reviewImport, type Ledger, type ImportBatch, type ReviewedGroup } from '@nive/finance';
 
-import { Button, Heading } from '../../ui';
-
-import { ImportAccount } from './import-account';
+import { Button, Heading } from '../../../ui';
+import { ImportAccount } from '../import-account/import-account';
 
 type Plan = { before: Ledger; group: ReviewedGroup };
 

@@ -6,6 +6,7 @@ import {
   enrollmentLifetime,
   importDigest,
   localWebOrigin,
+  movementDigest,
   postMovement,
   proposalLifetime,
   runtimeUrl,
@@ -37,10 +38,11 @@ type Link = {
 type Proposal = {
   id: string;
   movement: MovementInput;
+  digest: string;
   expiresAt: number;
 };
 export type ImportProposal = { id: string; batch: ImportBatch; digest: string; expiresAt: number };
-type Receipt = { original: MovementInput | string; status: 'pending' | 'rejected' | 'applied' | 'expired' };
+type Receipt = { original: string; status: 'pending' | 'rejected' | 'applied' | 'expired' };
 type ReviewedProposal = { proposal: Proposal; movement: MovementInput };
 const next = z.strictObject({ work: runtimeWork.nullable(), expiresAt: z.number().int().positive() });
 
@@ -140,7 +142,7 @@ export class LocalAgent {
 
   async approve(review: ReviewedProposal): Promise<void> {
     await this.save(review.proposal, 'prepare-movement', (ledger) =>
-      postMovement(ledger, review.proposal.id, review.movement),
+      postMovement(ledger, review.proposal.id, review.movement, review.proposal.digest),
     );
   }
 
@@ -323,15 +325,9 @@ export class LocalAgent {
       }
 
       const { requestId } = call.input;
-      let original: string | MovementInput;
-
-      if (call.capability === 'prepare-import') {
-        const digest = await importDigest(call.input);
-
-        original = digest;
-      } else {
-        original = call.input.movement;
-      }
+      const fingerprint =
+        call.capability === 'prepare-import' ? importDigest(call.input) : movementDigest(call.input.movement);
+      const original = await fingerprint;
 
       if (!this.current(link) || !this.store.ready()) {
         return { error: 'locked' };
@@ -340,11 +336,7 @@ export class LocalAgent {
       const receipt = this.receipts.get(requestId);
 
       if (receipt) {
-        if (
-          typeof original === 'string' || typeof receipt.original === 'string'
-            ? original !== receipt.original
-            : !sameMovement(receipt.original, original)
-        ) {
+        if (original !== receipt.original) {
           return { error: 'conflict' };
         }
 
@@ -364,9 +356,15 @@ export class LocalAgent {
       const duplicate = ledger.movements.find((entry) => entry.id === requestId);
 
       if (duplicate) {
-        return typeof original !== 'string' && sameMovement(duplicate.movement, original)
-          ? { proposalId: requestId, status: 'applied' }
-          : { error: 'conflict' };
+        if (call.capability !== 'prepare-movement') {
+          return { error: 'conflict' };
+        }
+
+        const matches = duplicate.proposalDigest
+          ? duplicate.proposalDigest === original
+          : sameMovement(duplicate.movement, call.input.movement);
+
+        return matches ? { proposalId: requestId, status: 'applied' } : { error: 'conflict' };
       }
 
       if (this.pending() || this.receipts.size >= 100) {
@@ -375,14 +373,12 @@ export class LocalAgent {
 
       const expiresAt = Date.now() + proposalLifetime;
 
-      if (call.capability === 'prepare-import' && typeof original === 'string') {
+      if (call.capability === 'prepare-import') {
         this.pending.set({ id: requestId, batch: call.input, digest: original, expiresAt });
-      } else if (call.capability === 'prepare-movement') {
+      } else {
         const movement = validateMovement(ledger, call.input.movement);
 
-        this.pending.set({ id: requestId, movement, expiresAt });
-      } else {
-        return { error: 'invalid' };
+        this.pending.set({ id: requestId, movement, digest: original, expiresAt });
       }
 
       this.receipts.set(requestId, { original, status: 'pending' });

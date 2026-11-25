@@ -1,11 +1,11 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { importDigest, importInput, type ImportBatch, type ImportRow, type Ledger } from '@nive/finance';
 
-import { Button, Select } from '../../ui';
+import { Button, Select } from '../../../ui';
+import { ImportReview } from '../import-review/import-review';
+import { LedgerStore } from '../ledger-store';
 
 import { columns, mapCsv, readCfdi, readCsv, type Mapping } from './import-files';
-import { ImportReview } from './import-review';
-import { LedgerStore } from './ledger-store';
 
 @Component({
   selector: 'app-local-import',

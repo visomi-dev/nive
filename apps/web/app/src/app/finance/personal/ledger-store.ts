@@ -188,9 +188,12 @@ export class LedgerStore {
     };
 
     try {
-      const { ledger, revision } = await this.read(binding, storage);
+      const snapshot = await this.read(binding, storage);
+      const { ledger, revision } = snapshot;
 
       allowed();
+      // A rejected review must be able to compare its draft against the latest saved ledger.
+      this.publish(snapshot);
       const updated = transform(ledger);
       const savedRevision = updated === ledger ? revision : revision + 1;
 
@@ -200,7 +203,18 @@ export class LedgerStore {
 
         allowed();
 
-        await storage.putUnit(vaultUnitId(binding.ownerId, next), revision, encrypted, allowed);
+        try {
+          await storage.putUnit(vaultUnitId(binding.ownerId, next), revision, encrypted, allowed);
+        } catch (error) {
+          if (error instanceof VaultError && error.code === 'revision-conflict') {
+            const latest = await this.read(binding, storage);
+
+            allowed();
+            this.publish(latest);
+          }
+
+          throw error;
+        }
       }
 
       this.current(binding);

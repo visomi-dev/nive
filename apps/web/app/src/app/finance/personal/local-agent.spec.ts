@@ -2,12 +2,15 @@ import { DOCUMENT } from '@angular/common';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
+  addAccount,
   emptyLedger,
+  ledgerSchema,
   enrollmentLifetime,
   proposalLifetime,
   type Capability,
   type Ledger,
   type RuntimeCall,
+  type RuntimeResult,
 } from '@nive/finance';
 
 import { Session } from '../../auth/session/session';
@@ -36,9 +39,9 @@ const input = {
     },
   ],
 };
-const work = {
+const work: { id: string; call: RuntimeCall } = {
   id: 'c078651f-2a79-428e-b773-83fb80e12660',
-  call: { capability: 'prepare-import', input } satisfies RuntimeCall,
+  call: { capability: 'prepare-import', input },
 };
 
 function deferred<T>() {
@@ -50,9 +53,9 @@ function deferred<T>() {
   return { resolve, promise };
 }
 
-async function setup(grants: Capability[] = ['prepare-import'], unlocked = true) {
+async function setup(grants: Capability[] = ['prepare-import'], unlocked = true, initial = emptyLedger()) {
   const ready = signal(unlocked);
-  const ledger = signal(emptyLedger());
+  const ledger = signal(initial);
   const session = {
     user: () => ({ id: 'synthetic-owner' }),
     full: () => true,
@@ -79,25 +82,22 @@ async function setup(grants: Capability[] = ['prepare-import'], unlocked = true)
       },
     ],
   });
-  const reply = deferred<{ error?: string; status?: string }>();
-  const expiresAt = Date.now() + enrollmentLifetime;
-  let sent = false;
+  let request: { task: typeof work; reply: ReturnType<typeof deferred<RuntimeResult>> } | undefined;
 
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit) => {
       if (url.endsWith('/next')) {
-        const item = sent ? null : work;
+        const task = request?.task ?? null;
 
-        sent = true;
-
-        return Response.json({ work: item, expiresAt });
+        return Response.json({ work: task, expiresAt: Date.now() + enrollmentLifetime });
       }
 
       if (url.endsWith('/reply')) {
-        const body = JSON.parse(String(init.body)) as { result: { error?: string; status?: string } };
+        const body = JSON.parse(String(init.body)) as { result: RuntimeResult };
 
-        reply.resolve(body.result);
+        request?.reply.resolve(body.result);
+        request = undefined;
       }
 
       return new Response(null, { status: 204 });
@@ -107,9 +107,15 @@ async function setup(grants: Capability[] = ['prepare-import'], unlocked = true)
 
   await agent.connect('1'.repeat(64), grants);
 
-  const result = await reply.promise;
+  const submit = (call: RuntimeCall = work.call) => {
+    const reply = deferred<RuntimeResult>();
 
-  return { agent, ledger, ready, session, update, result };
+    request = { task: { ...work, call }, reply };
+
+    return reply.promise;
+  };
+
+  return { agent, ledger, ready, session, update, submit };
 }
 
 afterEach(() => {
@@ -124,7 +130,8 @@ it.each([
 ])('requires an import grant and open vault before queuing', async ({ grants, ready, error }) => {
   const f = await setup(grants, ready);
 
-  expect(f.result).toEqual({ error });
+  await expect(f.submit()).resolves.toEqual({ error });
+
   expect(f.agent.importProposal()).toBeNull();
   expect(f.update).not.toHaveBeenCalled();
 });
@@ -134,7 +141,8 @@ it.each(['reject', 'lock', 'revoke', 'proposal expiry', 'grant expiry'])(
   async (reason) => {
     const f = await setup();
 
-    expect(f.result).toMatchObject({ status: 'pending' });
+    await expect(f.submit()).resolves.toMatchObject({ status: 'pending' });
+
     const proposal = f.agent.importProposal()!;
     const before = f.ledger();
     // Hold the session revalidation between the click and the write.
@@ -169,3 +177,41 @@ it.each(['reject', 'lock', 'revoke', 'proposal expiry', 'grant expiry'])(
     expect(f.ledger()).toEqual(emptyLedger());
   },
 );
+
+it('replays the original proposal after approving an edit and reconnecting', async () => {
+  const accountId = 'b9d75762-922a-4525-96dc-2d34448ad465';
+  const initial = addAccount(emptyLedger(), accountId, { name: 'Test account', currency: 'MXN', openingMinor: '0' });
+  const f = await setup(['prepare-movement'], true, initial);
+  const movement = {
+    accountId,
+    kind: 'expense' as const,
+    amountMinor: '122',
+    date: '2026-11-04',
+    note: 'Test original',
+  };
+  const call = { capability: 'prepare-movement' as const, input: { requestId: input.requestId, movement } };
+  const edited = { ...movement, amountMinor: '245', note: 'Test correction' };
+
+  await expect(f.submit(call)).resolves.toMatchObject({ status: 'pending' });
+
+  expect(f.ledger().movements).toHaveLength(0);
+
+  await f.agent.approve(f.agent.review(edited));
+
+  f.ledger.set(ledgerSchema.parse(JSON.parse(JSON.stringify(f.ledger()))));
+  f.agent.revoke();
+
+  await f.agent.connect('2'.repeat(64), ['prepare-movement']);
+
+  await expect(f.submit(call)).resolves.toMatchObject({ proposalId: input.requestId, status: 'applied' });
+
+  await expect(f.submit({ ...call, input: { ...call.input, movement: edited } })).resolves.toEqual({
+    error: 'conflict',
+  });
+
+  expect(f.ledger().movements).toEqual([
+    { id: input.requestId, movement: edited, proposalDigest: expect.stringMatching(/^[0-9a-f]{64}$/) },
+  ]);
+
+  expect(f.update).toHaveBeenCalledTimes(1);
+});

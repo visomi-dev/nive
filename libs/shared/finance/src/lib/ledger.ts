@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { sha256 } from './digest';
+
 // Nive v6 represents money as canonical signed minor-unit strings.
 export const currency = z.enum(['MXN', 'USD', 'EUR', 'JPY', 'KWD']);
 export type Currency = z.infer<typeof currency>;
@@ -57,6 +59,7 @@ export type ImportSource = z.infer<typeof importSource>;
 const movementRecord = z.strictObject({
   id: z.uuid(),
   movement: movementInput,
+  proposalDigest: z.hash('sha256').optional(),
   category: label.optional(),
   sources: z.array(importSource).max(32).optional(),
 });
@@ -142,19 +145,29 @@ export function sameMovement(left: MovementInput, right: MovementInput): boolean
   return JSON.stringify(movementInput.parse(left)) === JSON.stringify(movementInput.parse(right));
 }
 
-export function postMovement(ledger: Ledger, id: string, input: MovementInput): Ledger {
+export function movementDigest(input: MovementInput): Promise<string> {
+  return sha256(JSON.stringify(movementInput.parse(input)));
+}
+
+export function postMovement(ledger: Ledger, id: string, input: MovementInput, proposalDigest?: string): Ledger {
   const movement = validateMovement(ledger, input);
   const existing = ledger.movements.find((record) => record.id === id);
 
   if (existing) {
-    if (!sameMovement(existing.movement, movement)) {
+    if (!sameMovement(existing.movement, movement) || (proposalDigest && existing.proposalDigest !== proposalDigest)) {
       throw new Error('movement_conflict');
     }
 
     return ledger;
   }
 
-  return ledgerSchema.parse({ ...ledger, movements: [...ledger.movements, movementRecord.parse({ id, movement })] });
+  return ledgerSchema.parse({
+    ...ledger,
+    movements: [
+      ...ledger.movements,
+      movementRecord.parse({ id, movement, ...(proposalDigest ? { proposalDigest } : {}) }),
+    ],
+  });
 }
 
 const total = z.string().regex(/^(0|-?[1-9][0-9]{0,22})$/);

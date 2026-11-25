@@ -151,9 +151,9 @@
         (approved)="approveImport(proposal, $event)"
         (rejected)="rejectImport()"
       />
-    } @else {
-      <app-local-import />
     }
+
+    <app-local-import />
 
     @if (agent.proposal(); as proposal) {
       @if (ledger.accounts.length) {

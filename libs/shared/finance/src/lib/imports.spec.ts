@@ -7,11 +7,12 @@ import {
   importInput,
   importMatches,
   reviewImport,
+  reviewGroup,
   type ImportBatch,
   type ImportRow,
   type ReviewedGroup,
 } from './imports';
-import { categorySpending, emptyLedger, ledgerSchema, summarize } from './ledger';
+import { addAccount, categorySpending, emptyLedger, ledgerSchema, postMovement, summarize } from './ledger';
 
 function fixture() {
   const account = { name: 'Test account', currency: 'MXN' as const, openingMinor: '0' };
@@ -81,6 +82,41 @@ describe('reviewed import plans', () => {
         { ...review, rows: [review.rows[1]], budgets: [], account: null },
       ]),
     ).toThrow('duplicate_reference');
+  });
+
+  it('offers a compatible saved charge for an invoice issued on another date', () => {
+    const { review, bank } = fixture();
+    const accountId = review.accountId;
+    const chargeId = review.rows[1].id;
+    const charge = {
+      accountId,
+      kind: 'expense' as const,
+      date: bank.date!,
+      amountMinor: bank.amountMinor!,
+      note: bank.note,
+    };
+    const ledger = postMovement(addAccount(emptyLedger(), accountId, review.account!), chargeId, charge);
+    const withRefund = postMovement(ledger, randomUUID(), { ...charge, kind: 'income' });
+    const invoice = { ...review.rows[0].row, date: '2026-09-30' };
+
+    expect(importMatches(withRefund, accountId, invoice).map(({ id }) => id)).toEqual([chargeId]);
+    expect(importMatches(withRefund, accountId, { ...invoice, kind: null })).toEqual([]);
+    expect(importMatches(withRefund, accountId, { ...invoice, currency: 'USD' })).toEqual([]);
+    expect(importMatches(withRefund, accountId, { ...invoice, amountMinor: '300' })).toEqual([]);
+    const linked = reviewGroup(
+      withRefund,
+      { account: { id: accountId }, rows: [invoice], budgets: [] },
+      {
+        ...review,
+        account: null,
+        rows: [{ ...review.rows[0], row: invoice }],
+        budgets: [],
+      },
+    );
+
+    expect(linked.movements).toHaveLength(2);
+    expect(linked.movements[0]).toMatchObject({ movement: charge, sources: [invoice.source] });
+    expect(withRefund.movements[0].sources).toBeUndefined();
   });
 
   it('rejects unknown currency, missing values, unmatched evidence and unsupported budget lines atomically', async () => {
