@@ -1,0 +1,257 @@
+<section appUI="card" padding="sm" layout="plain" class="space-y-4">
+  @if (preview(); as review) {
+    @for (destination of review.after.accounts; track destination.id) {
+      @if (destination.id === review.accountId) {
+        <p>
+          {{ destination.name }} · {{ destination.currency }}
+          @if (account() === 'new') {
+            ·
+            <span i18n="@@personalAccountOpening">Opening amount</span>
+            {{ format(destination.openingMinor, destination.currency) }}
+          }
+        </p>
+      }
+    }
+
+    @for (line of draft().budgets; track $index) {
+      @if (line.include) {
+        <p>
+          <span i18n="@@importBudget">Monthly spending limit</span>
+          · {{ line.month }} · {{ line.category }} · {{ displayMinor(line.limitMinor) }} ·
+          <span i18n="@@importObserved">Observed spending</span>
+          ({{ line.months }}) ·
+          {{ displayMinor(spending(review.after, review.accountId, line.category, basis(line.months))) }}
+        </p>
+      }
+    }
+
+    <ul class="space-y-2">
+      @for (entry of review.rows; track entry.id) {
+        <li>
+          {{ sourceLabel(entry.row) }} ·
+          @switch (entry.decision.action) {
+            @case ('skip') {
+              <span i18n="@@importSkip">Skip row</span>
+            }
+            @case ('post') {
+              <span i18n="@@importPost">Add movement</span>
+            }
+            @case ('link') {
+              <span i18n="@@importLink">Link evidence to movement</span>
+
+              @for (target of review.after.movements; track target.id) {
+                @if (target.id === entry.decision.targetId) {
+                  · {{ target.movement.date }} · {{ target.movement.note }}
+                  @for (item of target.sources; track $index) {
+                    {{ item.reference }}
+                  }
+                }
+              }
+            }
+          }
+
+          @if (entry.decision.action !== 'skip') {
+            · {{ entry.row.date }} ·
+            @if (entry.row.kind === 'expense') {
+              <span i18n="@@personalMovementExpense">Expense</span>
+            } @else {
+              <span i18n="@@personalMovementIncome">Income</span>
+            }
+            · {{ entry.row.category }} · {{ displayMinor(entry.row.amountMinor!) }} · {{ entry.row.note }}
+          }
+        </li>
+      }
+    </ul>
+
+    <button appUI variant="secondary" type="button" (click)="edit()" [disabled]="busy()" i18n="@@importEdit">
+      Edit account plan
+    </button>
+  } @else {
+    @let data = draft();
+    <form (submit)="review($event)" ngNoForm class="grid gap-4">
+      <label>
+        <span i18n="@@personalConfirmAccount">Account</span>
+
+        <select appUI [(ngModel)]="account" required>
+          <option value="" i18n="@@personalSelectAccount">Select an account</option>
+
+          @for (item of store.ledger()?.accounts; track item.id) {
+            <option [value]="item.id">{{ item.name }} ({{ item.currency }})</option>
+          }
+
+          <option value="new" i18n="@@importNewAccount">Create account</option>
+        </select>
+      </label>
+
+      @if (account() === 'new') {
+        <div class="grid gap-2 sm:grid-cols-3">
+          <label>
+            <span i18n="@@personalAccountName">Account name</span>
+
+            <input appUI [(ngModel)]="data.name" required maxlength="80" />
+          </label>
+
+          <label>
+            <span i18n="@@personalAccountCurrency">Currency</span>
+
+            <select appUI [(ngModel)]="data.code" required>
+              <option value=""></option>
+
+              @for (c of currencies; track c) {
+                <option>{{ c }}</option>
+              }
+            </select>
+          </label>
+
+          <label>
+            <span i18n="@@personalAccountOpening">Opening amount</span>
+
+            <input appUI [(ngModel)]="data.opening" required inputmode="decimal" />
+          </label>
+        </div>
+      }
+
+      @for (line of data.budgets; track $index) {
+        <fieldset class="grid gap-2 sm:grid-cols-3">
+          <legend i18n="@@importBudget">Monthly spending limit</legend>
+
+          <label>
+            <input type="checkbox" [(ngModel)]="line.include" />
+
+            <span i18n="@@importInclude">Include in plan</span>
+          </label>
+
+          @if (line.include) {
+            <label>
+              <span i18n="@@importCategory">Budget category</span>
+
+              <input appUI [(ngModel)]="line.category" required />
+            </label>
+
+            <label>
+              <span i18n="@@personalSummaryMonth">Summary month</span>
+
+              <input appUI type="month" [(ngModel)]="line.month" required />
+            </label>
+
+            <label>
+              <span i18n="@@importLimitMinor">Period limit in minor units (replaces the current limit)</span>
+
+              <input appUI [(ngModel)]="line.limitMinor" required inputmode="numeric" />
+
+              @if (line.limitMinor && positive.test(line.limitMinor)) {
+                <small>{{ displayMinor(line.limitMinor) }}</small>
+              }
+            </label>
+
+            <label>
+              <span i18n="@@importBasis">Historical months, separated by commas</span>
+
+              <input appUI [(ngModel)]="line.months" required />
+            </label>
+          }
+        </fieldset>
+      }
+
+      @for (row of data.rows; track row.id; let i = $index) {
+        <fieldset class="grid gap-2 sm:grid-cols-3">
+          <legend>{{ sourceLabel(row.original) }}</legend>
+
+          @if (
+            row.original.needsReview ||
+            row.original.source.format === 'cfdi' ||
+            !row.original.kind ||
+            !row.original.amountMinor ||
+            !row.original.date ||
+            !row.original.currency
+          ) {
+            <p class="sm:col-span-3" i18n="@@importUncertain">
+              Check the source and confirm the missing or uncertain values.
+            </p>
+          }
+
+          <label>
+            <span i18n="@@personalMovementDate">Date</span>
+
+            <input appUI type="date" [(ngModel)]="row.date" />
+          </label>
+
+          <label>
+            <span i18n="@@personalMovementAmount">Amount</span>
+
+            <input appUI inputmode="decimal" [(ngModel)]="row.amount" />
+          </label>
+
+          <label>
+            <span i18n="@@personalAccountCurrency">Currency</span>
+
+            <select appUI [(ngModel)]="row.code">
+              <option value=""></option>
+
+              @for (c of currencies; track c) {
+                <option>{{ c }}</option>
+              }
+            </select>
+          </label>
+
+          <label>
+            <span i18n="@@personalMovementKind">Movement type</span>
+
+            <select appUI [(ngModel)]="row.kind">
+              <option [ngValue]="null"></option>
+
+              <option value="expense" i18n="@@personalMovementExpense">Expense</option>
+
+              <option value="income" i18n="@@personalMovementIncome">Income</option>
+            </select>
+          </label>
+
+          <label>
+            <span i18n="@@personalMovementNote">Note</span>
+
+            <input appUI [(ngModel)]="row.note" maxlength="140" />
+          </label>
+
+          <label>
+            <span i18n="@@importCategory">Budget category</span>
+
+            <input appUI [(ngModel)]="row.category" maxlength="80" />
+          </label>
+
+          <label>
+            <span i18n="@@importDecision">Row decision</span>
+
+            <select appUI [(ngModel)]="row.choice" required>
+              <option value=""></option>
+
+              <option value="post" i18n="@@importPost">Add movement</option>
+
+              <option value="skip" i18n="@@importSkip">Skip row</option>
+
+              @for (match of candidates(row, i); track match.id) {
+                <option [value]="match.id">
+                  <ng-container i18n="@@importLink">Link evidence to movement</ng-container>
+                  · {{ match.label }}
+                </option>
+              }
+            </select>
+          </label>
+
+          @if (candidates(row, i).length) {
+            <p class="sm:col-span-3" i18n="@@importPossibleMatch">
+              Possible match. Check whether this is evidence for an existing charge.
+            </p>
+          }
+        </fieldset>
+      }
+
+      @if (invalid()) {
+        <p role="alert" i18n="@@importInvalid">
+          Check the account, currencies, dates, amounts and row decisions. Link or skip a repeated reference.
+        </p>
+      }
+
+      <button appUI type="submit" i18n="@@personalReviewValues">Review exact values</button>
+    </form>
+  }
+</section>

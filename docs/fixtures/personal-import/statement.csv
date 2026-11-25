@@ -1,0 +1,4 @@
+date,kind,amount,currency,note,reference
+2026-11-04,expense,24.50,MXN,Synthetic notebooks,TEST-PAPER-04
+2026-11-05,income,100.00,MXN,Synthetic refund,TEST-REFUND-05
+2026-10-04,expense,20.00,MXN,Synthetic notebooks,TEST-PAPER-10

@@ -4,6 +4,10 @@ import {
   accountInput,
   addAccount,
   currency,
+  categorySpending,
+  categoryMovements,
+  type Ledger,
+  type ImportSource,
   formatMoney,
   localWebOrigin,
   movementInput,
@@ -17,12 +21,14 @@ import {
 import { NavigationHeading } from '../../shared/navigation-heading';
 import { Button, Card, Heading, Input, Select, Text } from '../../ui';
 
+import { ImportReview } from './import-review';
+import { LocalImport } from './local-import';
 import { LedgerStore } from './ledger-store';
-import { LocalAgent } from './local-agent';
+import { LocalAgent, type ImportProposal } from './local-agent';
 
 @Component({
   selector: 'app-personal-finance',
-  imports: [NavigationHeading, Button, Card, Heading, Input, Select, Text],
+  imports: [ImportReview, LocalImport, NavigationHeading, Button, Card, Heading, Input, Select, Text],
   providers: [LedgerStore, LocalAgent],
   templateUrl: './personal.html',
 })
@@ -61,6 +67,8 @@ export class PersonalFinance {
     return account ? { movement, account, destination } : null;
   });
 
+  protected readonly evidence = categoryMovements;
+  protected readonly spending = categorySpending;
   protected readonly format = formatMoney;
   protected readonly currencies = currency.options;
 
@@ -72,6 +80,18 @@ export class PersonalFinance {
     this.store.lock();
     this.reviewed.set(null);
     this.feedback.set(null);
+  }
+
+  protected accountLabel(id: string): string {
+    const item = this.store.ledger()?.accounts.find((account) => account.id === id);
+
+    return item ? item.name + ' (' + item.currency + ')' : '';
+  }
+
+  protected sourceText(source: ImportSource): string {
+    return [source.format.toUpperCase(), source.document, source.sheet, source.row, source.page, source.reference]
+      .filter(Boolean)
+      .join(' · ');
   }
 
   protected displayAmount(accountId: string, amount: string): string {
@@ -103,6 +123,10 @@ export class PersonalFinance {
 
     if (input.has('read')) {
       requested.push('read-summary');
+    }
+
+    if (input.has('import')) {
+      requested.push('prepare-import');
     }
 
     if (input.has('prepare')) {
@@ -185,6 +209,21 @@ export class PersonalFinance {
         this.feedback.set('saved');
       });
     }
+  }
+
+  protected approveImport(proposal: ImportProposal, value: { before: Ledger; after: Ledger }): void {
+    void this.handle(async () => {
+      await this.agent.approveImport(proposal, value.before, value.after);
+
+      this.feedback.set('saved');
+    });
+  }
+
+  protected rejectImport(): void {
+    void this.handle(() => {
+      this.agent.reject();
+      this.feedback.set('rejected');
+    });
   }
 
   protected reject(event: Event): void {

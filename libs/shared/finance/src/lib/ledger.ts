@@ -5,7 +5,8 @@ export const currency = z.enum(['MXN', 'USD', 'EUR', 'JPY', 'KWD']);
 export type Currency = z.infer<typeof currency>;
 const precision: Record<Currency, number> = { MXN: 2, USD: 2, EUR: 2, JPY: 0, KWD: 3 };
 const signedMinor = z.string().regex(/^(0|-?[1-9][0-9]{0,17})$/);
-const positiveMinor = z.string().regex(/^[1-9][0-9]{0,17}$/);
+
+export const positiveMinor = z.string().regex(/^[1-9][0-9]{0,17}$/);
 const label = z.string().trim().min(1).max(80);
 const note = z.string().trim().max(140);
 
@@ -33,15 +34,53 @@ export const movementInput = z.discriminatedUnion('kind', [
 ]);
 export type MovementInput = z.infer<typeof movementInput>;
 
-const movementRecord = z.strictObject({ id: z.uuid(), movement: movementInput });
+// Only structured locators and transaction references survive approval.
+export const importSource = z.strictObject({
+  format: z.enum(['csv', 'xlsx', 'pdf', 'cfdi']),
+  document: z.number().int().min(1).max(50).optional(),
+  row: z.number().int().min(1).max(1048576).optional(),
+  sheet: z
+    .string()
+    .trim()
+    .min(1)
+    .max(31)
+    .regex(/^[\p{L}\p{N} _.-]+$/u)
+    .optional(),
+  page: z.number().int().min(1).max(10000).optional(),
+  reference: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/)
+    .optional(),
+});
+export type ImportSource = z.infer<typeof importSource>;
+const movementRecord = z.strictObject({
+  id: z.uuid(),
+  movement: movementInput,
+  category: label.optional(),
+  sources: z.array(importSource).max(32).optional(),
+});
+
+export const budgetLine = z.strictObject({
+  month: period,
+  category: label,
+  limitMinor: positiveMinor,
+  basisMonths: z.array(period).min(1).max(12),
+});
+export const periodBudget = budgetLine.extend({ accountId: z.uuid() });
 
 export const ledgerSchema = z.strictObject({
   version: z.literal(1),
   accounts: z.array(accountSchema).max(100),
   movements: z.array(movementRecord).max(1000),
+  budgets: z.array(periodBudget).max(1200).default([]),
+  imports: z
+    .array(z.strictObject({ id: z.uuid(), digest: z.hash('sha256') }))
+    .max(1000)
+    .default([]),
 });
 export type Ledger = z.infer<typeof ledgerSchema>;
-export const emptyLedger = (): Ledger => ({ version: 1, accounts: [], movements: [] });
+export const emptyLedger = (): Ledger => ledgerSchema.parse({ version: 1, accounts: [], movements: [] });
 
 export function parseMoney(decimal: string, code: Currency): string {
   const digits = precision[code];
@@ -171,4 +210,25 @@ export function summarize(ledger: Ledger, month: string): z.infer<typeof summary
       expenseMinor: expense.toString(),
     })),
   });
+}
+
+export function categoryMovements(ledger: Ledger, accountId: string, category: string, months: readonly string[]) {
+  return ledger.movements.filter(
+    (entry) =>
+      entry.category === category &&
+      entry.movement.accountId === accountId &&
+      entry.movement.kind === 'expense' &&
+      months.includes(entry.movement.date.slice(0, 7)),
+  );
+}
+
+export function categorySpending(
+  ledger: Ledger,
+  accountId: string,
+  category: string,
+  months: readonly string[],
+): string {
+  return categoryMovements(ledger, accountId, category, months)
+    .reduce((sum, entry) => sum + BigInt(entry.movement.amountMinor), BigInt(0))
+    .toString();
 }

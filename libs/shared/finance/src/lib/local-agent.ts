@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { importInput } from './imports';
 import { movementInput, period, summarySchema } from './ledger';
 
 export const runtimePort = 43871;
@@ -8,17 +9,18 @@ export const pairingLifetime = 5 * 60_000;
 export const enrollmentLifetime = 15 * 60_000;
 export const proposalLifetime = 5 * 60_000;
 
-export const capability = z.enum(['read-summary', 'prepare-movement']);
+export const capability = z.enum(['read-summary', 'prepare-movement', 'prepare-import']);
 export const capabilities = z
   .array(capability)
   .min(1)
-  .max(2)
+  .max(3)
   .refine((value) => new Set(value).size === value.length);
 export type Capability = z.infer<typeof capability>;
 
 export const summaryInput = z.strictObject({ month: period });
 export const preparationInput = z.strictObject({ requestId: z.uuid(), movement: movementInput });
 export const runtimeCall = z.discriminatedUnion('capability', [
+  z.strictObject({ capability: z.literal('prepare-import'), input: importInput }),
   z.strictObject({ capability: z.literal('read-summary'), input: summaryInput }),
   z.strictObject({ capability: z.literal('prepare-movement'), input: preparationInput }),
 ]);

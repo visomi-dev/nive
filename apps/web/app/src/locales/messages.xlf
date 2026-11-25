@@ -3683,6 +3683,102 @@
       <trans-unit id="personalAgentGrantedPrepare" datatype="html">
         <source>Can prepare movements for review.</source>
       </trans-unit>
+      <trans-unit id="importApprove" datatype="html">
+        <source>Approve and save batch</source>
+      </trans-unit>
+      <trans-unit id="importBasis" datatype="html">
+        <source>Historical months, separated by commas</source>
+      </trans-unit>
+      <trans-unit id="importBudget" datatype="html">
+        <source>Monthly spending limit</source>
+      </trans-unit>
+      <trans-unit id="importCategory" datatype="html">
+        <source>Budget category</source>
+      </trans-unit>
+      <trans-unit id="importDecision" datatype="html">
+        <source>Row decision</source>
+      </trans-unit>
+      <trans-unit id="importEdit" datatype="html">
+        <source>Edit account plan</source>
+      </trans-unit>
+      <trans-unit id="importFile" datatype="html">
+        <source>Local CSV or CFDI 4.0 XML</source>
+      </trans-unit>
+      <trans-unit id="importGrant" datatype="html">
+        <source>Let the agent propose account, movement and budget imports for review.</source>
+      </trans-unit>
+      <trans-unit id="importGranted" datatype="html">
+        <source>Can propose import and budget plans for review.</source>
+      </trans-unit>
+      <trans-unit id="importHeading" datatype="html">
+        <source>Review import and budget plan</source>
+      </trans-unit>
+      <trans-unit id="importInclude" datatype="html">
+        <source>Include in plan</source>
+      </trans-unit>
+      <trans-unit id="importInvalid" datatype="html">
+        <source>Check the account, currencies, dates, amounts and row decisions. Link or skip a repeated reference.</source>
+      </trans-unit>
+      <trans-unit id="importLimitMinor" datatype="html">
+        <source>Period limit in minor units (replaces the current limit)</source>
+      </trans-unit>
+      <trans-unit id="importLink" datatype="html">
+        <source>Link evidence to movement</source>
+      </trans-unit>
+      <trans-unit id="importLocal" datatype="html">
+        <source>Import CSV or CFDI on this device</source>
+      </trans-unit>
+      <trans-unit id="importLocalError" datatype="html">
+        <source>Check the file format, the 50-row limit and your open vault.</source>
+      </trans-unit>
+      <trans-unit id="importMap" datatype="html">
+        <source>Review mapped rows</source>
+      </trans-unit>
+      <trans-unit id="importNewAccount" datatype="html">
+        <source>Create account</source>
+      </trans-unit>
+      <trans-unit id="importObserved" datatype="html">
+        <source>Observed spending</source>
+      </trans-unit>
+      <trans-unit id="importPageLabel" datatype="html">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="importPossibleMatch" datatype="html">
+        <source>Possible match. Check whether this is evidence for an existing charge.</source>
+      </trans-unit>
+      <trans-unit id="importPost" datatype="html">
+        <source>Add movement</source>
+      </trans-unit>
+      <trans-unit id="importPrivacy" datatype="html">
+        <source>Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither forwards nor stores the original file.</source>
+      </trans-unit>
+      <trans-unit id="importRowLabel" datatype="html">
+        <source>Row</source>
+      </trans-unit>
+      <trans-unit id="importSavedBudget" datatype="html">
+        <source>Budget plan</source>
+      </trans-unit>
+      <trans-unit id="importSkip" datatype="html">
+        <source>Skip row</source>
+      </trans-unit>
+      <trans-unit id="importSpent" datatype="html">
+        <source>Spent</source>
+      </trans-unit>
+      <trans-unit id="importStale" datatype="html">
+        <source>Review each account again. Use one group per account and check for changes in the vault.</source>
+      </trans-unit>
+      <trans-unit id="importUncertain" datatype="html">
+        <source>Check the source and confirm the missing or uncertain values.</source>
+      </trans-unit>
+      <trans-unit id="importUnmapped" datatype="html">
+        <source>Unmapped</source>
+      </trans-unit>
+      <trans-unit id="importEvidence" datatype="html">
+        <source>Source movements</source>
+      </trans-unit>
+      <trans-unit id="importAlreadyApplied" datatype="html">
+        <source>This batch is already in the vault.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

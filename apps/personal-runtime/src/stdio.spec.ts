@@ -39,6 +39,7 @@ it('uses official stdio client and permits only authorized requests against a li
 
     expect(available.tools.map((tool) => tool.name).sort()).toEqual([
       'nive_financial_summary',
+      'nive_prepare_import',
       'nive_prepare_movement',
     ]);
 
@@ -78,6 +79,40 @@ it('uses official stdio client and permits only authorized requests against a li
         },
       }),
     ).resolves.toMatchObject({ structuredContent: { error: 'permission_denied' } });
+
+    const batch = {
+      requestId: 'bdf14bbf-1552-4a96-b95b-9b6b671f26ab',
+      groups: [
+        {
+          account: null,
+          budgets: [],
+          rows: [
+            {
+              kind: null,
+              currency: null,
+              date: null,
+              amountMinor: null,
+              note: '',
+              category: null,
+              needsReview: true,
+              source: { format: 'csv', row: 2 },
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(call('nive_prepare_import', batch)).resolves.toMatchObject({
+      structuredContent: { error: 'permission_denied' },
+    });
+
+    await expect(call('nive_prepare_import', { ...batch, path: 'synthetic.csv' })).resolves.toMatchObject({
+      structuredContent: { error: 'invalid' },
+    });
+
+    await expect(call('nive_approve_import', batch)).resolves.toMatchObject({
+      structuredContent: { error: 'invalid' },
+    });
 
     await expect(call('nive_financial_summary', { ...args, ownerId: 'synthetic-election' })).resolves.toMatchObject({
       structuredContent: { error: 'invalid' },

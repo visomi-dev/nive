@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic extraction fixture. No real taxpayer, certificate or fiscal signature. -->
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="4.0" Fecha="2026-11-04T09:30:00" Moneda="MXN" SubTotal="24.50" Total="24.50" TipoDeComprobante="I" MetodoPago="PPD" FormaPago="99" Exportacion="01" LugarExpedicion="00000">
+  <cfdi:Emisor Rfc="AAA010101AAA" Nombre="Synthetic stationery" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="XAXX010101000" Nombre="Synthetic buyer" UsoCFDI="G03" RegimenFiscalReceptor="616" DomicilioFiscalReceptor="00000"/>
+  <cfdi:Conceptos><cfdi:Concepto ClaveProdServ="14111500" Cantidad="1" ClaveUnidad="H87" Descripcion="Synthetic notebooks" ValorUnitario="24.50" Importe="24.50" ObjetoImp="01"/></cfdi:Conceptos>
+  <cfdi:Complemento><tfd:TimbreFiscalDigital Version="1.1" UUID="c8bbb4a2-9845-4312-8e0f-65de26a10400" FechaTimbrado="2026-11-04T09:30:01"/></cfdi:Complemento>
+</cfdi:Comprobante>

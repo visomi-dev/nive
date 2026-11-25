@@ -3,8 +3,10 @@
 The local preview connects Codex to the personal finance workspace on a loopback Nive development
 site. The signed-in browser tab holds the workspace key and performs the financial operations.
 An independent WebAuthn PRF vault passkey unlocks the workspace. The gateway handles the account
-session. The ledger and each approved movement are encrypted with the existing vault format and
+session. The ledger and approved changes are encrypted with the existing vault format and
 stored in this browser's IndexedDB.
+
+For attachment analysis and a multi-month spending plan, follow the [synthetic Codex walkthrough](personal-import.md).
 
 ## Start and connect
 
@@ -52,6 +54,7 @@ returned to the MCP client or its model provider.
 | Tool                     | Input                                                                                                                                                                       | Result                                                                                                                                        |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `nive_financial_summary` | Calendar month in `YYYY-MM` format                                                                                                                                          | Account names, IDs, currencies, current balances and income and expenses per currency for the selected month. Transfers only affect balances. |
+| `nive_prepare_import`    | Up to 50 structured rows in up to eight account groups, source locators and optional monthly budget lines.                                                                  | Proposal ID and status. The browser validates and reviews the plan before saving.                                                             |
 | `nive_prepare_movement`  | Unique `requestId` UUID and a movement with account ID, type, date, positive minor-unit amount and note. Transfers also require a destination account in the same currency. | A proposal ID and status for the authorized workspace.                                                                                        |
 
 The financial values returned by the summary are decimal strings in integer minor units. For
@@ -69,6 +72,6 @@ once after explicit approval and that refreshing and unlocking the same browser 
 movement. Try denying one capability, locking the vault, and revoking the grant. The build's
 `personal-runtime:test` target exercises the official MCP client over real stdio with local fixtures.
 
-This preview uses browser-local data. Cross-device sync, unattended operation, v6 import,
-categories, budget allocations, corrections, CLI and managed harness are outside this slice. The
+This preview uses browser-local data. Cross-device sync, unattended operation, the full v6 budget domain,
+corrections, standalone CLI and managed harness are outside this slice. The
 app does not send the workspace key or financial plaintext to the gateway.

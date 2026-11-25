@@ -2030,6 +2030,134 @@
         <source>Can prepare movements for review.</source>
         <target>Puede preparar movimientos para revisión.</target>
       </trans-unit>
+      <trans-unit id="importApprove" datatype="html">
+        <source>Approve and save batch</source>
+        <target>Aprobar y guardar lote</target>
+      </trans-unit>
+      <trans-unit id="importBasis" datatype="html">
+        <source>Historical months, separated by commas</source>
+        <target>Meses históricos, separados por comas</target>
+      </trans-unit>
+      <trans-unit id="importBudget" datatype="html">
+        <source>Monthly spending limit</source>
+        <target>Límite mensual de gasto</target>
+      </trans-unit>
+      <trans-unit id="importCategory" datatype="html">
+        <source>Budget category</source>
+        <target>Categoría de presupuesto</target>
+      </trans-unit>
+      <trans-unit id="importDecision" datatype="html">
+        <source>Row decision</source>
+        <target>Decisión para esta fila</target>
+      </trans-unit>
+      <trans-unit id="importEdit" datatype="html">
+        <source>Edit account plan</source>
+        <target>Editar plan de la cuenta</target>
+      </trans-unit>
+      <trans-unit id="importFile" datatype="html">
+        <source>Local CSV or CFDI 4.0 XML</source>
+        <target>Archivo CSV o XML CFDI 4.0 local</target>
+      </trans-unit>
+      <trans-unit id="importGrant" datatype="html">
+        <source>Let the agent propose account, movement and budget imports for review.</source>
+        <target>Permitir que el agente proponga cuentas, movimientos y presupuestos para mi revisión.</target>
+      </trans-unit>
+      <trans-unit id="importGranted" datatype="html">
+        <source>Can propose import and budget plans for review.</source>
+        <target>Puede proponer importaciones y presupuestos para revisión.</target>
+      </trans-unit>
+      <trans-unit id="importHeading" datatype="html">
+        <source>Review import and budget plan</source>
+        <target>Revisar importación y plan de presupuesto</target>
+      </trans-unit>
+      <trans-unit id="importInclude" datatype="html">
+        <source>Include in plan</source>
+        <target>Incluir en el plan</target>
+      </trans-unit>
+      <trans-unit id="importInvalid" datatype="html">
+        <source>Check the account, currencies, dates, amounts and row decisions. Link or skip a repeated reference.</source>
+        <target>Revisa la cuenta, las divisas, las fechas, los importes y las decisiones por fila. Vincula u omite las referencias repetidas.</target>
+      </trans-unit>
+      <trans-unit id="importLimitMinor" datatype="html">
+        <source>Period limit in minor units (replaces the current limit)</source>
+        <target>Límite del periodo en unidades menores (sustituye el límite actual)</target>
+      </trans-unit>
+      <trans-unit id="importLink" datatype="html">
+        <source>Link evidence to movement</source>
+        <target>Vincular evidencia al movimiento</target>
+      </trans-unit>
+      <trans-unit id="importLocal" datatype="html">
+        <source>Import CSV or CFDI on this device</source>
+        <target>Importar CSV o CFDI en este dispositivo</target>
+      </trans-unit>
+      <trans-unit id="importLocalError" datatype="html">
+        <source>Check the file format, the 50-row limit and your open vault.</source>
+        <target>Revisa el formato del archivo, el límite de 50 filas y que la bóveda esté abierta.</target>
+      </trans-unit>
+      <trans-unit id="importMap" datatype="html">
+        <source>Review mapped rows</source>
+        <target>Revisar filas mapeadas</target>
+      </trans-unit>
+      <trans-unit id="importNewAccount" datatype="html">
+        <source>Create account</source>
+        <target>Crear cuenta</target>
+      </trans-unit>
+      <trans-unit id="importObserved" datatype="html">
+        <source>Observed spending</source>
+        <target>Gasto observado</target>
+      </trans-unit>
+      <trans-unit id="importPageLabel" datatype="html">
+        <source>Page</source>
+        <target>Página</target>
+      </trans-unit>
+      <trans-unit id="importPossibleMatch" datatype="html">
+        <source>Possible match. Check whether this is evidence for an existing charge.</source>
+        <target>Posible coincidencia. Revisa si este documento corresponde a un cargo existente.</target>
+      </trans-unit>
+      <trans-unit id="importPost" datatype="html">
+        <source>Add movement</source>
+        <target>Agregar movimiento</target>
+      </trans-unit>
+      <trans-unit id="importPrivacy" datatype="html">
+        <source>Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither forwards nor stores the original file.</source>
+        <target>Al adjuntar un documento en Codex, lo compartes con su proveedor. Nive recibe los valores propuestos. No reenvía ni guarda el archivo original.</target>
+      </trans-unit>
+      <trans-unit id="importRowLabel" datatype="html">
+        <source>Row</source>
+        <target>Fila</target>
+      </trans-unit>
+      <trans-unit id="importSavedBudget" datatype="html">
+        <source>Budget plan</source>
+        <target>Plan de presupuesto</target>
+      </trans-unit>
+      <trans-unit id="importSkip" datatype="html">
+        <source>Skip row</source>
+        <target>Omitir fila</target>
+      </trans-unit>
+      <trans-unit id="importSpent" datatype="html">
+        <source>Spent</source>
+        <target>Gastado</target>
+      </trans-unit>
+      <trans-unit id="importStale" datatype="html">
+        <source>Review each account again. Use one group per account and check for changes in the vault.</source>
+        <target>Vuelve a revisar cada cuenta. Usa un grupo por cuenta y verifica los cambios en la bóveda.</target>
+      </trans-unit>
+      <trans-unit id="importUncertain" datatype="html">
+        <source>Check the source and confirm the missing or uncertain values.</source>
+        <target>Consulta el origen y confirma los valores que falten o sean inciertos.</target>
+      </trans-unit>
+      <trans-unit id="importUnmapped" datatype="html">
+        <source>Unmapped</source>
+        <target>Sin asignar</target>
+      </trans-unit>
+      <trans-unit id="importEvidence" datatype="html">
+        <source>Source movements</source>
+        <target>Movimientos de origen</target>
+      </trans-unit>
+      <trans-unit id="importAlreadyApplied" datatype="html">
+        <source>This batch is already in the vault.</source>
+        <target>Este lote ya está en la bóveda.</target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

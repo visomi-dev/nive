@@ -6,13 +6,32 @@ import { isAbsolute, join } from 'node:path';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { localWebOrigin, pairingLifetime, preparationInput, runtimeCall, summaryInput } from '@nive/finance';
+import {
+  importInput,
+  localWebOrigin,
+  pairingLifetime,
+  preparationInput,
+  runtimeCall,
+  summaryInput,
+} from '@nive/finance';
 import { z } from 'zod';
 
 import { Broker } from './broker';
 import { startLoopback } from './loopback';
 
+const toolCapabilities = new Map([
+  ['nive_financial_summary', 'read-summary'],
+  ['nive_prepare_movement', 'prepare-movement'],
+  ['nive_prepare_import', 'prepare-import'],
+]);
 const tools = [
+  {
+    name: 'nive_prepare_import',
+    description:
+      'Queue up to 50 structured rows from the files the person shared for review in Nive. Never send files, paths, URLs or keys. Group rows by account and currency. Up to eight accounts. For a requested budget plan, categorize expenses and propose monthly per-category limits supported by the observed basisMonths. Use the same category on its underlying expenses. Exclude duplicate invoice evidence from the spending pattern. Use null for unknown fields and mark ambiguous rows needsReview. An invoice is not proof of payment. Use the attachment position as document and keep available row, sheet, page and transaction reference or CFDI UUID. Use positive exact minor-unit strings. Use empty budgets when none requested. Retry the identical payload with the same requestId. Only the person can approve in Nive.',
+    inputSchema: z.toJSONSchema(importInput),
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
   {
     name: 'nive_financial_summary',
     description:
@@ -92,12 +111,7 @@ async function main(): Promise<void> {
     tools: tools.map(({ inputSchema, ...tool }) => ({ ...tool, inputSchema: { ...inputSchema, type: 'object' } })),
   }));
   server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
-    const capability =
-      params.name === 'nive_financial_summary'
-        ? 'read-summary'
-        : params.name === 'nive_prepare_movement'
-          ? 'prepare-movement'
-          : undefined;
+    const capability = toolCapabilities.get(params.name);
     const call = runtimeCall.safeParse({ capability, input: params.arguments ?? {} });
     const result = await (call.success ? broker.invoke(call.data) : Promise.resolve({ error: 'invalid' }));
 

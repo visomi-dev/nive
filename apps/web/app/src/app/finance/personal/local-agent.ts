@@ -4,6 +4,7 @@ import {
   bearer,
   capabilities,
   enrollmentLifetime,
+  importDigest,
   localWebOrigin,
   postMovement,
   proposalLifetime,
@@ -13,6 +14,8 @@ import {
   summarize,
   validateMovement,
   type Capability,
+  type ImportBatch,
+  type Ledger,
   type MovementInput,
   type RuntimeCall,
   type RuntimeResult,
@@ -36,7 +39,8 @@ type Proposal = {
   movement: MovementInput;
   expiresAt: number;
 };
-type Receipt = { original: MovementInput; status: 'pending' | 'rejected' | 'applied' | 'expired' };
+export type ImportProposal = { id: string; batch: ImportBatch; digest: string; expiresAt: number };
+type Receipt = { original: MovementInput | string; status: 'pending' | 'rejected' | 'applied' | 'expired' };
 type ReviewedProposal = { proposal: Proposal; movement: MovementInput };
 const next = z.strictObject({ work: runtimeWork.nullable(), expiresAt: z.number().int().positive() });
 
@@ -48,7 +52,7 @@ export class LocalAgent {
   private readonly store = inject(LedgerStore);
 
   private readonly connection = signal<Link | null>(null);
-  private readonly pending = signal<Proposal | null>(null);
+  private readonly pending = signal<Proposal | ImportProposal | null>(null);
 
   private readonly receipts = new Map<string, Receipt>();
   private readonly cleanup = this.destroyRef.onDestroy(() => this.revoke());
@@ -57,8 +61,16 @@ export class LocalAgent {
 
   readonly connected = computed(() => this.connection() !== null);
   readonly grants = computed(() => this.connection()?.grants ?? []);
+  readonly proposal = computed(() => {
+    const value = this.pending();
 
-  readonly proposal = this.pending.asReadonly();
+    return value && 'movement' in value ? value : null;
+  });
+  readonly importProposal = computed(() => {
+    const value = this.pending();
+
+    return value && 'batch' in value ? value : null;
+  });
 
   async connect(value: string, requested: Capability[]): Promise<void> {
     const code = bearer.parse(value.trim());
@@ -119,38 +131,27 @@ export class LocalAgent {
   review(input: MovementInput): ReviewedProposal {
     const proposal = this.usableProposal();
 
+    if (!('movement' in proposal)) {
+      throw new Error('invalid');
+    }
+
     return { proposal, movement: validateMovement(this.store.ledger()!, input) };
   }
 
   async approve(review: ReviewedProposal): Promise<void> {
-    const link = this.connection();
+    await this.save(review.proposal, 'prepare-movement', (ledger) =>
+      postMovement(ledger, review.proposal.id, review.movement),
+    );
+  }
 
-    if (!link || this.usableProposal() !== review.proposal) {
-      throw new Error('expired');
-    }
+  async approveImport(proposal: ImportProposal, before: Ledger, reviewed: Ledger): Promise<void> {
+    await this.save(proposal, 'prepare-import', (current) => {
+      if (JSON.stringify(current) !== JSON.stringify(before)) {
+        throw new Error('stale_review');
+      }
 
-    await this.session.load(true);
-
-    const authorized = () =>
-      this.current(link) &&
-      link.grants.includes('prepare-movement') &&
-      this.store.ready() &&
-      this.pending() === review.proposal &&
-      Date.now() < review.proposal.expiresAt;
-
-    if (!authorized()) {
-      throw new Error('permission_denied');
-    }
-
-    await this.store.update((ledger) => postMovement(ledger, review.proposal.id, review.movement), authorized);
-
-    const receipt = this.receipts.get(review.proposal.id);
-
-    if (receipt) {
-      receipt.status = 'applied';
-    }
-
-    this.pending.set(null);
+      return reviewed;
+    });
   }
 
   reject(): void {
@@ -160,7 +161,42 @@ export class LocalAgent {
     this.pending.set(null);
   }
 
-  private usableProposal(): Proposal {
+  private async save(
+    proposal: Proposal | ImportProposal,
+    capability: Capability,
+    transform: (ledger: Ledger) => Ledger,
+  ): Promise<void> {
+    const link = this.connection();
+
+    if (!link || this.usableProposal() !== proposal) {
+      throw new Error('expired');
+    }
+
+    await this.session.load(true);
+
+    const authorized = () =>
+      this.current(link) &&
+      link.grants.includes(capability) &&
+      this.store.ready() &&
+      this.pending() === proposal &&
+      Date.now() < proposal.expiresAt;
+
+    if (!authorized()) {
+      throw new Error('permission_denied');
+    }
+
+    await this.store.update(transform, authorized);
+
+    const receipt = this.receipts.get(proposal.id);
+
+    if (receipt) {
+      receipt.status = 'applied';
+    }
+
+    this.pending.set(null);
+  }
+
+  private usableProposal(): Proposal | ImportProposal {
     const link = this.connection();
     const proposal = this.pending();
 
@@ -286,21 +322,49 @@ export class LocalAgent {
         return summarize(ledger, call.input.month);
       }
 
-      const { requestId, movement } = call.input;
+      const { requestId } = call.input;
+      let original: string | MovementInput;
+
+      if (call.capability === 'prepare-import') {
+        const digest = await importDigest(call.input);
+
+        original = digest;
+      } else {
+        original = call.input.movement;
+      }
+
+      if (!this.current(link) || !this.store.ready()) {
+        return { error: 'locked' };
+      }
+
       const receipt = this.receipts.get(requestId);
 
       if (receipt) {
-        if (!sameMovement(receipt.original, movement)) {
+        if (
+          typeof original === 'string' || typeof receipt.original === 'string'
+            ? original !== receipt.original
+            : !sameMovement(receipt.original, original)
+        ) {
           return { error: 'conflict' };
         }
 
         return receipt.status === 'expired' ? { error: 'expired' } : { proposalId: requestId, status: receipt.status };
       }
 
+      const applied = ledger.imports.find((entry) => entry.id === requestId);
+
+      if (applied) {
+        return applied.digest === original ? { proposalId: requestId, status: 'applied' } : { error: 'conflict' };
+      }
+
+      if (ledger.imports.some((entry) => entry.digest === original)) {
+        return { proposalId: requestId, status: 'applied' };
+      }
+
       const duplicate = ledger.movements.find((entry) => entry.id === requestId);
 
       if (duplicate) {
-        return sameMovement(duplicate.movement, movement)
+        return typeof original !== 'string' && sameMovement(duplicate.movement, original)
           ? { proposalId: requestId, status: 'applied' }
           : { error: 'conflict' };
       }
@@ -309,10 +373,19 @@ export class LocalAgent {
         return { error: 'busy' };
       }
 
-      const valid = validateMovement(ledger, movement);
+      const expiresAt = Date.now() + proposalLifetime;
 
-      this.receipts.set(requestId, { original: valid, status: 'pending' });
-      this.pending.set({ id: requestId, movement: valid, expiresAt: Date.now() + proposalLifetime });
+      if (call.capability === 'prepare-import' && typeof original === 'string') {
+        this.pending.set({ id: requestId, batch: call.input, digest: original, expiresAt });
+      } else if (call.capability === 'prepare-movement') {
+        const movement = validateMovement(ledger, call.input.movement);
+
+        this.pending.set({ id: requestId, movement, expiresAt });
+      } else {
+        return { error: 'invalid' };
+      }
+
+      this.receipts.set(requestId, { original, status: 'pending' });
 
       return { proposalId: requestId, status: 'pending' };
     } catch {

@@ -35,6 +35,10 @@
         </p>
 
         <ul class="space-y-1">
+          @if (agent.grants().includes('prepare-import')) {
+            <li i18n="@@importGranted">Can propose import and budget plans for review.</li>
+          }
+
           @if (agent.grants().includes('read-summary')) {
             <li i18n="@@personalAgentGrantedRead">Can read accounts and monthly totals.</li>
           }
@@ -66,6 +70,17 @@
 
             <span i18n="@@personalAgentPrepare">Let the agent prepare movements for my review.</span>
           </label>
+
+          <label class="flex items-start gap-2">
+            <input name="import" type="checkbox" />
+
+            <span i18n="@@importGrant">Let the agent propose account, movement and budget imports for review.</span>
+          </label>
+
+          <p i18n="@@importPrivacy">
+            Attaching a document in Codex shares it with its provider. Nive receives the proposed values. It neither
+            forwards nor stores the original file.
+          </p>
 
           <label class="flex items-start gap-2">
             <input name="consent" type="checkbox" required />
@@ -127,6 +142,18 @@
         </ul>
       }
     </section>
+
+    @if (agent.importProposal(); as proposal) {
+      <app-import-review
+        [batch]="proposal.batch"
+        [digest]="proposal.digest"
+        [busy]="busy()"
+        (approved)="approveImport(proposal, $event)"
+        (rejected)="rejectImport()"
+      />
+    } @else {
+      <app-local-import />
+    }
 
     @if (agent.proposal(); as proposal) {
       @if (ledger.accounts.length) {
@@ -299,6 +326,39 @@
       }
     }
 
+    @if (ledger.budgets.length) {
+      <section appUI="card" padding="sm" layout="plain" class="space-y-3">
+        <h2 appUI uiSize="md" i18n="@@importSavedBudget">Budget plan</h2>
+
+        <ul class="space-y-2">
+          @for (line of ledger.budgets; track $index) {
+            <li>
+              {{ line.month }} · {{ accountLabel(line.accountId) }} · {{ line.category }} ·
+              <span i18n="@@importBudget">Monthly spending limit</span>
+              {{ displayAmount(line.accountId, line.limitMinor) }} ·
+              <span i18n="@@importSpent">Spent</span>
+              {{ displayAmount(line.accountId, spending(ledger, line.accountId, line.category, [line.month])) }} ·
+              <span i18n="@@importObserved">Observed spending</span>
+              ({{ line.basisMonths.join(', ') }})
+              {{ displayAmount(line.accountId, spending(ledger, line.accountId, line.category, line.basisMonths)) }}
+              <details>
+                <summary i18n="@@importEvidence">Source movements</summary>
+
+                <ul>
+                  @for (entry of evidence(ledger, line.accountId, line.category, line.basisMonths); track entry.id) {
+                    <li>
+                      {{ entry.movement.date }} · {{ entry.movement.note }} ·
+                      {{ displayAmount(line.accountId, entry.movement.amountMinor) }}
+                    </li>
+                  }
+                </ul>
+              </details>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
     <section appUI="card" padding="sm" layout="plain" class="space-y-3" aria-labelledby="personal-movements">
       <h2 appUI uiSize="md" id="personal-movements" i18n="@@personalMovements">Movements</h2>
 
@@ -326,7 +386,11 @@
         @for (entry of ledger.movements; track entry.id) {
           <li>
             {{ entry.movement.date }} · {{ movementName(entry.movement.kind) }} ·
-            {{ displayAmount(entry.movement.accountId, entry.movement.amountMinor) }} · {{ entry.movement.note }}
+            {{ displayAmount(entry.movement.accountId, entry.movement.amountMinor) }} · {{ entry.movement.note }} ·
+            {{ entry.category }}
+            @for (source of entry.sources; track $index) {
+              <small>{{ sourceText(source) }}</small>
+            }
           </li>
         } @empty {
           <li i18n="@@personalMovementsEmpty">No movements yet.</li>
