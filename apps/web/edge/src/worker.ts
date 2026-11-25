@@ -4,7 +4,10 @@ export default {
       // Validate once without rewriting routing semantics or decoding a literal percent twice.
       decodeURIComponent(new URL(request.url).pathname);
     } catch {
-      return Response.json({ error: 'request_invalid' }, { status: 400, headers: { 'cache-control': 'no-store' } });
+      return Response.json(
+        { error: 'request_invalid' },
+        { status: 400, headers: { 'cache-control': 'no-store', 'x-nive-path-guard': 'rejected' } },
+      );
     }
 
     return fetch(request);

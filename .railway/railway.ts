@@ -8,7 +8,6 @@ const region = 'us-east4-eqdc4a';
 const postgresMount = '/var/lib/postgresql/data';
 const redisMount = '/data';
 const jaegerMount = '/badger';
-const secretGenerator = 'secret(64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")';
 
 export const watchPatterns = [
   '/apps/web/gateway/**',
@@ -59,7 +58,7 @@ export default defineRailway((context) => {
       PGDATA: `${postgresMount}/pgdata`,
       POSTGRES_DB: 'nive',
       POSTGRES_USER: 'postgres',
-      POSTGRES_PASSWORD: { generator: secretGenerator },
+      POSTGRES_PASSWORD: preserve(),
       DATABASE_URL:
         'postgresql://${{POSTGRES_USER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{POSTGRES_DB}}',
     },
@@ -75,10 +74,13 @@ export default defineRailway((context) => {
     volumeMounts: { [redisMount]: brokerData },
     deploy: {
       requiredMountPath: redisMount,
-      startCommand: `/bin/sh -c 'exec docker-entrypoint.sh redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"'`,
+      startCommand: `/bin/sh -c ': "\${REDIS_PASSWORD:?REDIS_PASSWORD is required}" && cd /tmp && exec docker-entrypoint.sh redis-server --dir /tmp --appendonly no --save "" --requirepass "$REDIS_PASSWORD"'`,
     },
     env: {
-      REDIS_PASSWORD: { generator: secretGenerator },
+      // The attached volume is retained. The Pub/Sub process does not write to it.
+      RAILWAY_RUN_UID: '999',
+      SKIP_FIX_PERMS: '1',
+      REDIS_PASSWORD: preserve(),
       REDIS_URL: 'redis://:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379',
     },
   });
@@ -133,7 +135,7 @@ export default defineRailway((context) => {
       AUTH_ORIGIN: publicOrigin,
       AUTH_RP_ID: publicHost,
       NG_ALLOWED_HOSTS: publicHost,
-      SESSION_SECRET: { generator: secretGenerator },
+      SESSION_SECRET: preserve(),
       // One Railway HTTP ingress and only trusted private-network callers.
       AUTH_TRUST_PROXY: '1-hop',
       GOOGLE_AUTH_CLIENT_ID: preserve(),

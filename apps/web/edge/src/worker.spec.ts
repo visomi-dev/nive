@@ -16,6 +16,7 @@ describe('edge path validation', () => {
 
       expect(response.status).toBe(400);
       expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('x-nive-path-guard')).toBe('rejected');
       expect(body).toEqual({ error: 'request_invalid' });
       expect(forward).not.toHaveBeenCalled();
     },
@@ -54,5 +55,16 @@ describe('edge path validation', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(failure));
 
     await expect(worker.fetch(new Request('https://nive.example.invalid/api/'))).rejects.toBe(failure);
+  });
+
+  it('preserves an upstream HTTP failure without labelling it as an edge rejection', async () => {
+    const upstream = new Response('upstream error', { status: 502 });
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(upstream));
+
+    const response = await worker.fetch(new Request('https://nive.example.invalid/api/'));
+
+    expect(response).toBe(upstream);
+    expect(response.headers.has('x-nive-path-guard')).toBe(false);
   });
 });

@@ -4,16 +4,46 @@ import { readFile } from 'node:fs/promises';
 import brand from '../../assets/brand/public.json' with { type: 'json' };
 
 const origin = new URL(process.argv[2]);
-const request = (path) => fetch(new URL(path, origin), { redirect: 'manual', signal: AbortSignal.timeout(10000) });
+
+async function request(path, { method = 'GET', check = 'gateway route' } = {}) {
+  const url = new URL(path, origin);
+  const response = await fetch(url, { method, redirect: 'manual', signal: AbortSignal.timeout(10000) }).catch(
+    (error) => {
+      const reason = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'request failed';
+
+      throw new Error(`Transport failure during ${check} (${method}): ${reason} before an HTTP response.`);
+    },
+  );
+
+  if (response.status >= 500) {
+    throw new Error(`HTTP ${response.status} during ${check} (${method}). Response source unconfirmed.`);
+  }
+
+  return response;
+}
+
+async function readJson(response, check) {
+  assert.ok(
+    /^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? ''),
+    `${check} must return JSON`,
+  );
+
+  return response.json().catch((error) => {
+    const reason = error instanceof SyntaxError ? 'invalid JSON' : 'transport failure while reading the response';
+
+    throw new Error(`${check}: ${reason}.`);
+  });
+}
 
 const redirect = await request('/');
 
 assert.equal(redirect.status, 302);
 assert.equal(new URL(redirect.headers.get('location'), origin).pathname, '/es/');
 const api = await request('/api/');
-const greeting = await api.json();
 
 assert.equal(api.status, 200);
+const greeting = await readJson(api, 'API greeting');
+
 assert.deepEqual(greeting, { message: 'Hello API' });
 
 for (const locale of ['en', 'es']) {
@@ -73,9 +103,10 @@ for (const locale of ['en', 'es']) {
 }
 
 const missingApi = await request('/api/missing');
-const missingApiBody = await missingApi.json();
 
 assert.equal(missingApi.status, 404);
+const missingApiBody = await readJson(missingApi, 'missing API route');
+
 assert.deepEqual(missingApiBody, { error: 'not_found' });
 const missingApplication = await request('/app/en/missing');
 const missingApplicationHtml = await missingApplication.text();
@@ -106,7 +137,7 @@ for (const file of brand.files) {
   assert.equal(response.headers.get('cross-origin-resource-policy'), 'cross-origin');
   assert.equal(response.headers.get('set-cookie'), null);
   assert.ok(bytes.equals(expected), 'The published asset must match the versioned source');
-  const head = await fetch(new URL(path, origin), { method: 'HEAD', redirect: 'manual' });
+  const head = await request(path, { method: 'HEAD', check: 'brand asset' });
 
   assert.equal(head.status, 200);
   const headBody = await head.arrayBuffer();
@@ -122,21 +153,26 @@ for (const path of [
   '/static/%2e%2e%2fpackage.json',
   '/STATIC/missing.png',
 ]) {
-  const response = await request(path);
+  const response = await request(path, { check: 'static route boundary' });
 
   assert.equal(response.status, 404);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('set-cookie'), null);
-  const body = await response.json();
+  const body = await readJson(response, 'static route boundary');
 
   assert.deepEqual(body, { error: 'not_found' });
 }
 
-const malformedStatic = await request('/static/%zz');
-const malformedBody = await malformedStatic.json();
+const malformedStatic = await request('/static/%zz', { check: 'malformed static path' });
 
-assert.equal(malformedStatic.status, 400);
+assert.equal(malformedStatic.status, 400, 'Malformed static path must return HTTP 400.');
 assert.equal(malformedStatic.headers.get('cache-control'), 'no-store');
+const malformedBody = await readJson(malformedStatic, 'malformed static path');
+
 assert.deepEqual(malformedBody, { error: 'request_invalid' });
+
+if (malformedStatic.headers.get('x-nive-path-guard') === 'rejected') {
+  console.log('Malformed static path: rejection confirmed by the edge path guard.');
+}
 
 console.log('Gateway, localized Angular and Astro SSR, static assets, and route boundaries verified.');
